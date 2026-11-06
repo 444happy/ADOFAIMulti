@@ -761,7 +761,7 @@ namespace ADOFAIMulti
         static void DrawSettings(float W, float H)
         {
             GUI.DrawTexture(new Rect(0, 0, W, H), T_dim);
-            var r = new Rect(W - 28 - 560, 72, 560, 430);
+            var r = new Rect(W - 28 - 680, 72, 680, 430);
             if (Event.current.type == EventType.MouseDown && !r.Contains(Event.current.mousePosition)) { _settings = false; Event.current.Use(); return; }
             GUILayout.BeginArea(r, S_card);
             GUILayout.BeginHorizontal();

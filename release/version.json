@@ -1,7 +1,7 @@
 {
-  "Version": "0.6.0",
+  "Version": "0.6.1",
   "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
   "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
-  "Sha256": "2e5649efcc08111063d51e9f6497779f8c8b23396888b2a6c4e28b3be726b1a2",
-  "Notes": "UI 재설계: 라인업 + 스테이지 + 결과 시상대"
+  "Sha256": "6149ed3b4450a9403bb486fce11029adc268d149eed6209379cbcb38712ac9ad",
+  "Notes": "섬 나갈 때 검은 화면 수정, 기본 테마를 중립 톤으로"
 }

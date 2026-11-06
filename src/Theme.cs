@@ -14,7 +14,13 @@ namespace ADOFAIMulti
 
         public static readonly Theme[] All =
         {
-            new Theme { Id = "mint", Name = "민트 (Quartz)",
+            // 기본: 누구나 무난한 중립 다크 + 차분한 파랑 (Steam/Discord 계열의 익숙한 톤)
+            new Theme { Id = "default", Name = "기본",
+                Bg = H("111318"), BgTop = H("181b22"), Glow = H("23324d"), Side = H("14161c"), Card = H("1c1f27"), CardHi = H("252a34"),
+                Field = H("15181e"), Line = H("2a2f3a"), Acc = H("6aa8ff"), Acc2 = H("8fc0ff"), AccText = H("0c1220"),
+                Txt = H("eceff4"), Sub = H("9aa3b2"), Fire = H("ff6a4d"), Ice = H("5ab8ff"), Gold = H("ffd36b") },
+
+            new Theme { Id = "mint", Name = "민트",
                 Bg = H("0a120f"), BgTop = H("0f1d18"), Glow = H("1d4d3b"), Side = H("0d1713"), Card = H("17231e"), CardHi = H("1f2f28"),
                 Field = H("111b17"), Line = H("25352e"), Acc = H("74e0b0"), Acc2 = H("4fc3c9"), AccText = H("06110c"),
                 Txt = H("e7f2ec"), Sub = H("88a196"), Fire = H("ff6a4d"), Ice = H("5ab8ff"), Gold = H("ffd36b") },

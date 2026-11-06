@@ -7,7 +7,7 @@ namespace ADOFAIMulti
 {
     public static class Main
     {
-        public const string Version = "0.6.0";
+        public const string Version = "0.6.1";
         public static UnityModManager.ModEntry Mod;
         public static Harmony Harmony;
         public static bool Enabled;
@@ -48,6 +48,7 @@ namespace ADOFAIMulti
             else
             {
                 Session.LeaveRoom();
+                Island.Restore();
                 Net.Shutdown();
                 Harmony?.UnpatchAll(e.Info.Id);
                 if (_host != null) UnityEngine.Object.Destroy(_host);
