@@ -1,7 +1,7 @@
 {
-  "Version": "0.5.0",
+  "Version": "0.6.0",
   "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
   "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
-  "Sha256": "ddab28888e95024ebff2d09d364af04192a27a70918c00c9e78a0e74f1df275e",
-  "Notes": "테마 개편 + 테마 프리셋 4종"
+  "Sha256": "2e5649efcc08111063d51e9f6497779f8c8b23396888b2a6c4e28b3be726b1a2",
+  "Notes": "UI 재설계: 라인업 + 스테이지 + 결과 시상대"
 }

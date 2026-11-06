@@ -45,7 +45,8 @@ namespace ADOFAIMulti
         public static string Notice = "";
 
         // 현재 맵
-        public static string MapHash, MapRel, MapTitle;
+        public static string MapHash, MapRel, MapTitle, MapSong = "", MapArtist = "", MapAuthor = "";
+        public static string HostLevelPath => _hostLevelPath;
         public static long MapSize;
         static string _hostZip, _hostLevelPath;
 
@@ -117,6 +118,8 @@ namespace ADOFAIMulti
                 MainThread.Post(() =>
                 {
                     MapHash = p.Hash; MapRel = p.RelLevelFile; MapTitle = p.Title; MapSize = p.Size;
+                    var info = MapBrowser.ReadInfo(levelPath);
+                    MapSong = info?.Song ?? ""; MapArtist = info?.Artist ?? ""; MapAuthor = info?.Author ?? "";
                     _hostZip = p.ZipFile; _hostLevelPath = levelPath;
                     foreach (var e in Peers.Values) { e.State = PState.Lobby; e.Download = 0; e.Stats = new Stats(); }
                     Peers[Net.MyId].State = PState.HasMap;
@@ -129,7 +132,7 @@ namespace ADOFAIMulti
             catch (Exception ex) { MainThread.Post(() => { Phase = Phase.Lobby; Notice = "압축 실패: " + ex.Message; }); }
         }
 
-        static byte[] OfferPacket() => Packet.Build(Msg.MapOffer, w => { w.Write(MapHash); w.Write(MapSize); w.Write(MapRel); w.Write(MapTitle); });
+        static byte[] OfferPacket() => Packet.Build(Msg.MapOffer, w => { w.Write(MapHash); w.Write(MapSize); w.Write(MapRel); w.Write(MapTitle); w.Write(MapSong ?? ""); w.Write(MapArtist ?? ""); w.Write(MapAuthor ?? ""); });
 
         /// <summary>맵 없는 사람(취소한 사람)은 빼고 강제로 레벨 로드</summary>
         public static void HostStartLoad()
@@ -373,7 +376,7 @@ namespace ADOFAIMulti
                 case Msg.Welcome: Notice = "방에 들어왔습니다"; break;
                 case Msg.Reject: Notice = r.ReadString(); LeaveRoom(); break;
                 case Msg.MapOffer:
-                    MapHash = r.ReadString(); MapSize = r.ReadInt64(); MapRel = r.ReadString(); MapTitle = r.ReadString();
+                    MapHash = r.ReadString(); MapSize = r.ReadInt64(); MapRel = r.ReadString(); MapTitle = r.ReadString(); MapSong = r.ReadString(); MapArtist = r.ReadString(); MapAuthor = r.ReadString();
                     ResetMatch();
                     if (Net.IsHost) break;
                     Phase = Phase.Distributing;
@@ -415,13 +418,11 @@ namespace ADOFAIMulti
                     Notice = "결과 발표!";
                     Game.RestoreSettings();
                     UI.ShowResults = true;
-                    UI.Page = UI.Tab.Results;   // 섬에 있으면 결과 탭으로
                     break;
                 case Msg.BackToLobby:
                     ResetMatch();
                     Phase = Phase.Lobby;
                     UI.ShowResults = false;
-                    UI.Page = Net.IsHost ? UI.Tab.Map : UI.Tab.Room;
                     if (Game.IsScnGame) Island.ReturnFromLevel();
                     else if (!Island.InIsland) Island.Enter();
                     if (Net.IsHost) foreach (var e in Peers.Values) { e.State = PState.Lobby; e.Stats = new Stats(); }

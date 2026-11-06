@@ -4,16 +4,14 @@ using UnityEngine;
 
 namespace ADOFAIMulti
 {
-    /// <summary>Quartz 스타일 (다크 그린 · 사이드바 · 카드) IMGUI</summary>
+    /// <summary>
+    /// 멀티 섬 UI — 멀티의 흐름(맵 선택 → 맵 받기 → 준비 → 플레이 → 결과)을
+    /// 한 화면에서 보여주는 "로비 스테이지" 구성. 왼쪽 라인업(8슬롯), 오른쪽 스테이지,
+    /// 방장의 맵 서랍, 결과 시상대, 설정 팝오버.
+    /// </summary>
     public static class UI
     {
-        public enum Tab { Home, Room, Map, Results, Settings }
-        public static Tab Page = Tab.Home;
         public static bool ShowResults;
-        static bool _confirmLeave;
-
-        static string _joinId = "", _mapPath = "", _search = "";
-        static Vector2 _sPeers, _sMaps, _sRes;
 
         // ---- palette (현재 테마에서 복사) ----
         static Color C_bg, C_side, C_card, C_cardHi, C_line, C_acc, C_acc2, C_txt, C_sub, C_fire, C_ice, C_gold;
@@ -169,9 +167,12 @@ namespace ADOFAIMulti
         static void Section(string t) { GUILayout.Space(4); GUILayout.Label(t, S_section); }
 
         // =====================================================================
+        //  진입점
+        // =====================================================================
         public static void Draw()
         {
             Styles();
+            if (S_cta == null) ExtraStyles();
             if (Island.InIsland) DrawIsland();
             else if (Game.IsScnGame) { if (Session.InRoom) DrawInGame(); }
             else if (!Island.Busy) DrawPortal();
@@ -179,30 +180,62 @@ namespace ADOFAIMulti
             if (Island.Cover > 0.001f) DrawCover();
         }
 
-        // ---------------- 메인 메뉴의 포탈 ----------------
+        static GUIStyle S_cardMe, S_cta, S_ctaGhost, S_pill, S_title, S_stepOn, S_stepOff, S_empty, S_iconBtn;
+        static Theme _extraFor;
+
+        static void ExtraStyles()
+        {
+            _extraFor = Theme.Current;
+            S_cardMe = new GUIStyle(S_card); S_cardMe.normal.background = T_cardHi;
+            S_cta = new GUIStyle(S_btnAcc) { fontSize = 19, fixedHeight = 58 };
+            S_ctaGhost = new GUIStyle(S_btn) { fontSize = 17, fixedHeight = 58 };
+            S_pill = new GUIStyle(Label(12, C_txt, FontStyle.Bold, TextAnchor.MiddleCenter)) { padding = new RectOffset(9, 9, 2, 2), border = new RectOffset(9, 9, 9, 9) };
+            S_title = Label(38, C_txt, FontStyle.Bold);
+            S_stepOn = Label(13, C_txt, FontStyle.Bold, TextAnchor.MiddleCenter);
+            S_stepOff = Label(13, A(C_sub, 0.7f), FontStyle.Normal, TextAnchor.MiddleCenter);
+            S_empty = Button(Round(A(C_card, 0.35f), 12, A(Color.white, 0.05f)), Round(A(C_card, 0.6f), 12, A(C_acc, 0.35f)), A(C_sub, 0.7f), 14, 0);
+            S_empty.alignment = TextAnchor.MiddleLeft; S_empty.padding = new RectOffset(20, 16, 0, 0); S_empty.margin = new RectOffset(0, 0, 0, 0);
+            S_iconBtn = new GUIStyle(S_btn) { fixedHeight = 36, fontSize = 14, padding = new RectOffset(14, 14, 4, 4) };
+        }
+
+        static bool _drawer, _settings, _confirmLeave;
+        static string _joinId = "", _mapPath = "", _search = "";
+        static Vector2 _sMaps, _sRes;
+
+        // 플레이어 행성 색 (슬롯 순서대로)
+        static Color SlotColor(int i)
+        {
+            switch (i % 8)
+            {
+                case 0: return C_fire; case 1: return C_ice; case 2: return C_gold; case 3: return Hex("7ee08a");
+                case 4: return Hex("ff8fd0"); case 5: return Hex("b69cff"); case 6: return Hex("ffa94d"); default: return Hex("5fe0d6");
+            }
+        }
+
+        // =====================================================================
+        //  메인 메뉴 포탈 · 전환 화면
+        // =====================================================================
         static void DrawPortal()
         {
             if (Updater.Current == Updater.State.ReadyToRestart)
-                GUI.Label(new Rect(Screen.width - 420, Screen.height - 128, 400, 22), $"<color=#{HexOf(C_acc)}>멀티 v{Updater.Latest} 받음 · 재시작하면 적용</color>", Label(13, C_acc, FontStyle.Normal, TextAnchor.MiddleRight));
-            var r = new Rect(Screen.width - 260, Screen.height - 100, 240, 76);
+                GUI.Label(new Rect(Screen.width - 420, Screen.height - 128, 400, 22), $"멀티 v{Updater.Latest} 받음 · 재시작하면 적용", Label(13, C_acc, FontStyle.Normal, TextAnchor.MiddleRight));
+            var r = new Rect(Screen.width - 270, Screen.height - 104, 250, 80);
             if (GUI.Button(r, "", S_cardBtn)) Island.Enter();
-            Orbit(new Vector2(r.x + 38, r.y + r.height / 2), 15, 7, 1.2f);
-            GUI.Label(new Rect(r.x + 66, r.y + 12, 170, 28), "멀티 섬으로", Label(19, C_txt, FontStyle.Bold));
-            GUI.Label(new Rect(r.x + 66, r.y + 40, 170, 22), "Ctrl + M", S_small);
+            Orbit(new Vector2(r.x + 42, r.y + r.height / 2), 16, 8, 1.2f);
+            GUI.Label(new Rect(r.x + 74, r.y + 14, 170, 28), "멀티 섬으로", Label(19, C_txt, FontStyle.Bold));
+            GUI.Label(new Rect(r.x + 74, r.y + 42, 170, 22), "친구와 같은 맵으로 대결 · Ctrl + M", S_small);
         }
 
-        // ---------------- 전환 화면 ----------------
         static void DrawCover()
         {
             var old = GUI.color;
             GUI.color = new Color(1, 1, 1, Island.Cover);
             GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), T_bg);
-            Orbit(new Vector2(Screen.width / 2f, Screen.height / 2f - 20), 34, 13, 2.2f);
-            GUI.Label(new Rect(0, Screen.height / 2f + 34, Screen.width, 30), Island.CoverText, Label(17, C_sub, FontStyle.Normal, TextAnchor.MiddleCenter));
+            Orbit(new Vector2(Screen.width / 2f, Screen.height / 2f - 20), 36, 14, 2.2f);
+            GUI.Label(new Rect(0, Screen.height / 2f + 38, Screen.width, 30), Island.CoverText, Label(17, C_sub, FontStyle.Normal, TextAnchor.MiddleCenter));
             GUI.color = old;
         }
 
-        // 불/얼음 행성 공전 애니메이션
         static void Orbit(Vector2 c, float radius, float size, float speed)
         {
             float a = Time.unscaledTime * speed * Mathf.PI;
@@ -217,333 +250,436 @@ namespace ADOFAIMulti
             GUI.DrawTexture(new Rect(p.x - r, p.y - r, r * 2, r * 2), T_circle);
             GUI.color = old;
         }
+        static void Fill(Rect r, Color c) { var o = GUI.color; GUI.color = c; GUI.DrawTexture(r, T_white); GUI.color = o; }
 
         // =====================================================================
-        //  멀티 섬
+        //  멀티 섬 (로비 스테이지)
         // =====================================================================
         static void DrawIsland()
         {
+            if (_extraFor != Theme.Current) ExtraStyles();
             var e = Event.current;
-            if (e.type == EventType.KeyDown && e.keyCode == KeyCode.Escape && !Island.Busy) { if (_confirmLeave) _confirmLeave = false; else AskLeave(); e.Use(); }
-            if (e.type == EventType.KeyDown && e.keyCode == KeyCode.F5 && Session.Phase == Phase.WaitingStart) { Session.ToggleReady(); e.Use(); }
+            if (e.type == EventType.KeyDown && e.keyCode == KeyCode.Escape && !Island.Busy)
+            {
+                if (_confirmLeave) _confirmLeave = false;
+                else if (_settings) _settings = false;
+                else if (_drawer) _drawer = false;
+                else if (ShowResults && Session.Results.Count > 0 && Session.Phase != Phase.Results) ShowResults = false;
+                else AskLeave();
+                e.Use();
+            }
 
             float W = Screen.width, H = Screen.height;
-            // 배경: 세로 그라데이션 + 은은한 빛 두 개 + 섬 그림
+            DrawBackdrop(W, H);
+            DrawTopBar(W);
+
+            var body = new Rect(28, 84, W - 56, H - 84 - 24);
+            if (!Session.InRoom) DrawEntrance(body);
+            else
+            {
+                float lw = Mathf.Clamp(W * 0.27f, 300, 400);
+                DrawLineup(new Rect(body.x, body.y, lw, body.height));
+                var stage = new Rect(body.x + lw + 24, body.y, body.width - lw - 24, body.height);
+                if (ShowResults && Session.Results.Count > 0) DrawPodium(stage);
+                else DrawStage(stage);
+            }
+
+            if (_drawer) DrawMapDrawer(W, H);
+            if (_settings) DrawSettings(W, H);
+            if (_confirmLeave) DrawConfirm();
+        }
+
+        static void DrawBackdrop(float W, float H)
+        {
             GUI.DrawTexture(new Rect(0, 0, W, H), T_bg);
             float pulse = 0.85f + Mathf.Sin(Time.unscaledTime * 0.6f) * 0.15f;
             var oc = GUI.color;
             GUI.color = A(Color.white, pulse);
-            GUI.DrawTexture(new Rect(W * 0.55f, -H * 0.35f, W * 0.8f, W * 0.8f), T_glow);
-            GUI.color = A(Color.white, 0.5f * pulse);
-            GUI.DrawTexture(new Rect(-W * 0.2f, H * 0.45f, W * 0.6f, W * 0.6f), T_glow);
+            GUI.DrawTexture(new Rect(W * 0.5f, -H * 0.4f, W * 0.8f, W * 0.8f), T_glow);
+            GUI.color = A(Color.white, 0.45f * pulse);
+            GUI.DrawTexture(new Rect(-W * 0.25f, H * 0.5f, W * 0.6f, W * 0.6f), T_glow);
             GUI.color = oc;
-            DrawIslandArt(new Rect(0, 0, W, H));
-
-            // 상단 바 + 불→얼음 그라데이션 선
-            GUI.DrawTexture(new Rect(0, 0, W, 52), T_side);
-            GUI.DrawTexture(new Rect(0, 51, W, 2), T_grad);
-            Orbit(new Vector2(32, 26), 10, 6, 0.9f);
-            GUI.Label(new Rect(58, 10, 300, 32), "ADOFAI <color=#" + HexOf(C_acc) + ">MULTI</color>", S_logo);
-            if (Session.InRoom)
-            {
-                string badge = (Net.IsHost ? "방장" : "멤버") + "  ·  " + Session.Board.Count + "/8  ·  " + PhaseText();
-                GUI.Label(new Rect(200, 14, 400, 24), badge, S_small);
-            }
-            if (GUI.Button(new Rect(W - 54, 8, 44, 36), "×", Label(26, C_sub, FontStyle.Normal, TextAnchor.MiddleCenter))) AskLeave();
-
-            // 사이드바 (활성 탭 왼쪽에 강조 막대)
-            GUI.DrawTexture(new Rect(0, 53, 64, H - 53), T_side);
-            GUI.DrawTexture(new Rect(63, 53, 1, H - 53), T_line);
-            GUILayout.BeginArea(new Rect(9, 64, 46, H - 72));
-            SideBtn(Tab.Home, "홈");
-            SideBtn(Tab.Room, "방");
-            SideBtn(Tab.Map, "맵");
-            SideBtn(Tab.Results, "결과");
-            SideBtn(Tab.Settings, "설정");
-            GUILayout.FlexibleSpace();
-            if (GUILayout.Button("나가기", S_side)) AskLeave();
-            GUILayout.Space(36);
-            GUILayout.EndArea();
-
-            // 하단 바
-            GUI.DrawTexture(new Rect(64, H - 36, W - 64, 36), T_side);
-            GUI.DrawTexture(new Rect(64, H - 36, W - 64, 1), T_line);
-            GUILayout.BeginArea(new Rect(80, H - 31, W - 92, 28));
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("ADOFAI Multi " + Main.Version, S_small, GUILayout.ExpandWidth(false));
-            GUILayout.Space(16);
-            string st = Esc(string.Join("  ·  ", new[] { Net.Status, Session.Notice }.Where(x => !string.IsNullOrEmpty(x)).ToArray()));
-            GUILayout.Label(st, S_small);
-            GUILayout.FlexibleSpace();
-            if (Session.Phase == Phase.WaitingStart) { GUILayout.Label("F5", S_chip, GUILayout.ExpandWidth(false)); GUILayout.Label("준비", S_small, GUILayout.ExpandWidth(false)); GUILayout.Space(12); }
-            GUILayout.Label("Esc", S_chip, GUILayout.ExpandWidth(false)); GUILayout.Label("섬 떠나기", S_small, GUILayout.ExpandWidth(false));
-            GUILayout.EndHorizontal();
-            GUILayout.EndArea();
-
-            // content
-            GUILayout.BeginArea(new Rect(80, 68, W - 96, H - 112));
-            switch (Page)
-            {
-                case Tab.Home: PageHome(); break;
-                case Tab.Room: PageRoom(); break;
-                case Tab.Map: PageMap(); break;
-                case Tab.Results: PageResults(); break;
-                case Tab.Settings: PageSettings(); break;
-            }
-            GUILayout.EndArea();
-
-            if (_confirmLeave) DrawConfirm();
+            DrawTilePath(W, H);
         }
 
-        static void AskLeave()
+        // 화면 아래를 지나는 타일 길 + 박자에 맞춰 굴러가는 두 행성
+        static void DrawTilePath(float W, float H)
         {
-            if (Session.InRoom) _confirmLeave = true;
-            else Island.Leave();
-        }
-
-        static void SideBtn(Tab t, string icon)
-        {
-            bool on = Page == t;
-            if (GUILayout.Button(icon, on ? S_sideOn : S_side)) Page = t;
-            if (on && Event.current.type == EventType.Repaint)
-            {
-                var r = GUILayoutUtility.GetLastRect();
-                GUI.DrawTexture(new Rect(r.x - 9, r.y + 10, 3, r.height - 20), T_accBar);
-            }
-            GUILayout.Space(6);
-        }
-
-        // 배경: 섬 위 타일 길 + 공전하는 행성 (얼불춤 느낌)
-        static void DrawIslandArt(Rect area)
-        {
-            float y = area.height - 120, tile = 34, gap = 6;
-            int n = Mathf.CeilToInt(area.width / (tile + gap)) + 2;
-            float speed = 1.6f; // beats/sec
-            float beat = Time.unscaledTime * speed;
+            float y = H - 70, tile = 30, gap = 6;
+            int n = Mathf.CeilToInt(W / (tile + gap)) + 1;
+            float beat = Time.unscaledTime * 1.6f;
             int cur = Mathf.FloorToInt(beat);
-            float scroll = (beat - cur) * 0f;
             var old = GUI.color;
-            for (int i = 0; i < n; i++)
-            {
-                float x = 80 + i * (tile + gap) - scroll;
-                float wave = Mathf.Sin(i * 0.55f) * 18;
-                GUI.color = new Color(1, 1, 1, 0.07f);
-                GUI.DrawTexture(new Rect(x, y + wave, tile, tile), T_card);
-            }
-            int idx = cur % n;
-            float t = beat - cur;
-            Vector2 C(int i) => new Vector2(80 + i * (tile + gap) + tile / 2f, y + Mathf.Sin(i * 0.55f) * 18 + tile / 2f);
+            GUI.color = A(Color.white, 0.06f);
+            for (int i = 0; i < n; i++) GUI.DrawTexture(new Rect(i * (tile + gap), y + Mathf.Sin(i * 0.5f) * 14, tile, tile), T_card);
+            Vector2 C(int i) => new Vector2(i * (tile + gap) + tile / 2f, y + Mathf.Sin(i * 0.5f) * 14 + tile / 2f);
+            int idx = cur % n; float t = beat - cur;
             var a = C(idx); var b = C((idx + 1) % n);
             float ang = Mathf.Atan2(b.y - a.y, b.x - a.x) + Mathf.PI * (1 - t);
             var p = a + new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * Vector2.Distance(a, b);
-            GUI.color = new Color(1, 1, 1, 0.35f);
-            bool fireCenter = idx % 2 == 0;
-            Dot(a, 9, fireCenter ? C_fire : C_ice);
-            Dot(p, 9, fireCenter ? C_ice : C_fire);
+            GUI.color = A(Color.white, 0.3f);
+            bool fire = idx % 2 == 0;
+            Dot(a, 8, fire ? C_fire : C_ice); Dot(p, 8, fire ? C_ice : C_fire);
             GUI.color = old;
         }
 
-        // ---------------- 공통 위젯 ----------------
-        static void Title(string t, string sub)
+        static void DrawTopBar(float W)
         {
-            GUILayout.Label(t, S_h1, GUILayout.Height(40));
-            if (Event.current.type == EventType.Repaint)
+            Orbit(new Vector2(46, 42), 11, 7, 0.9f);
+            GUI.Label(new Rect(70, 26, 260, 32), "ADOFAI <color=#" + HexOf(C_acc) + ">MULTI</color>", Label(20, C_txt, FontStyle.Bold));
+
+            if (Session.InRoom)
             {
-                var r = GUILayoutUtility.GetLastRect();
-                GUI.DrawTexture(new Rect(r.x + 2, r.yMax - 2, 36, 3), T_accBar);
-            }
-            if (!string.IsNullOrEmpty(sub)) { GUILayout.Space(4); GUILayout.Label(sub, S_para); }
-            GUILayout.Space(10);
-        }
-
-        /// <summary>콘텐츠 영역 폭을 n등분한 카드 폭 (카드 margin 12 고려)</summary>
-        static float Col(int n) => Mathf.Floor((Screen.width - 96f) / n) - 12f;
-
-        static void StatCard(string num, string label, float width)
-        {
-            GUILayout.BeginVertical(S_card, GUILayout.Width(width), GUILayout.Height(84));
-            GUILayout.Label(label, S_section);
-            GUILayout.Label(num, S_num);
-            GUILayout.EndVertical();
-        }
-
-        static void Bar(float p, float h)
-        {
-            var r = GUILayoutUtility.GetRect(100, h, GUILayout.ExpandWidth(true));
-            GUI.DrawTexture(r, T_line);
-            GUI.DrawTexture(new Rect(r.x, r.y, r.width * Mathf.Clamp01(p), r.height), T_accBar);
-        }
-
-        // ---------------- 홈 ----------------
-        static void PageHome()
-        {
-            Title("홈", "ADOFAI Multi — " + Main.Version + "   ·   " + StripTags(Updater.StatusText));
-            if (!Session.InRoom)
-            {
-                GUILayout.BeginHorizontal();
-                GUILayout.BeginVertical(S_card, GUILayout.Width(Col(2)), GUILayout.Height(170));
-                GUILayout.Label("방 만들기", S_h2);
-                GUILayout.Label("내가 방장이 돼요. 맵을 고르면 모두에게 자동으로 전송돼요. 최대 8명.", S_para);
-                GUILayout.FlexibleSpace();
-                if (GUILayout.Button("새 방 만들기", S_btnAcc)) { Net.CreateRoom(8); Page = Tab.Room; }
-                GUILayout.EndVertical();
-
-                GUILayout.BeginVertical(S_card, GUILayout.Width(Col(2)), GUILayout.Height(170));
-                GUILayout.Label("참가하기", S_h2);
-                GUILayout.Label("Steam 친구 초대를 수락하면 자동으로 들어와요. 또는 로비 ID 입력:", S_para);
-                GUILayout.FlexibleSpace();
-                GUILayout.BeginHorizontal();
-                _joinId = GUILayout.TextField(_joinId, S_field);
-                if (GUILayout.Button("참가", S_btn, GUILayout.Width(90)) && ulong.TryParse(_joinId.Trim(), out var lid)) { Net.Join(lid); Page = Tab.Room; }
-                GUILayout.EndHorizontal();
-                GUILayout.EndVertical();
-                GUILayout.EndHorizontal();
-
-                GUILayout.BeginHorizontal();
-                StatCard(CacheCount().ToString(), "받아둔 맵", Col(2));
-                StatCard(MapBrowser.Items.Count.ToString(), "내 컴퓨터의 맵", Col(2));
-                GUILayout.EndHorizontal();
-                MapBrowser.ScanOnce();
-                return;
+                // 로고(~260px)와 오른쪽 버튼(~540px) 사이에 맞춰 배치
+                float left = 280, right = W - 28 - 540;
+                float sw = Mathf.Min(660, right - left);
+                if (sw >= 320) DrawStepper(new Rect(left + (right - left - sw) / 2f, 22, sw, 40));
             }
 
-            GUILayout.BeginHorizontal();
-            StatCard($"{Session.Board.Count}/8", "참가자", Col(2));
-            StatCard(PhaseText(), "진행 상태", Col(2));
-            GUILayout.EndHorizontal();
+            // 오른쪽 버튼들
+            float x = W - 28;
+            x -= 96; if (GUI.Button(new Rect(x, 24, 96, 36), "나가기", S_iconBtn)) AskLeave();
+            x -= 104; if (GUI.Button(new Rect(x, 24, 96, 36), "설정", S_iconBtn)) _settings = !_settings;
+            if (Session.InRoom)
+            {
+                x -= 116; if (GUI.Button(new Rect(x, 24, 108, 36), "친구 초대", S_iconBtn)) Net.InviteOverlay();
+                if (Net.CurrentLobby.HasValue)
+                {
+                    string id = Net.CurrentLobby.Value.Id.Value.ToString();
+                    x -= 196;
+                    if (GUI.Button(new Rect(x, 24, 188, 36), "로비  " + id.Substring(Mathf.Max(0, id.Length - 6)) + "  복사", S_iconBtn))
+                    { GUIUtility.systemCopyBuffer = id; Session.Notice = "로비 ID를 복사했어요"; }
+                }
+            }
+            GUI.DrawTexture(new Rect(28, 74, W - 56, 1), T_line);
 
-            GUILayout.BeginVertical(S_card);
-            GUILayout.Label("맵", S_h2);
-            GUILayout.Label(Session.MapHash != null ? $"{Esc(Session.MapTitle)}   <color=#{HexOf(C_sub)}>{Session.MapSize / 1048576f:0.0}MB</color>" : (Net.IsHost ? "맵 탭에서 맵을 골라 배포하세요." : "방장이 맵을 고르는 중..."), S_paraTxt);
-            GUILayout.EndVertical();
-
-            GUILayout.BeginVertical(S_card);
-            GUILayout.Label(Net.IsHost ? "방장" : "멤버", S_h2);
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("친구 초대", S_btn)) Net.InviteOverlay();
-            if (Net.CurrentLobby.HasValue && GUILayout.Button("로비 ID 복사", S_btn)) GUIUtility.systemCopyBuffer = Net.CurrentLobby.Value.Id.Value.ToString();
-            if (GUILayout.Button("방 나가기", S_btn)) _confirmLeave = true;
-            GUILayout.EndHorizontal();
-            GUILayout.EndVertical();
+            // 아래 상태 줄
+            string st = Esc(string.Join("   ·   ", new[] { Net.Status, Session.Notice }.Where(s => !string.IsNullOrEmpty(s)).ToArray()));
+            GUI.Label(new Rect(28, Screen.height - 26, W - 300, 22), st, S_small);
+            GUI.Label(new Rect(W - 300, Screen.height - 26, 272, 22), "v" + Main.Version + "   ·   Esc 뒤로", Label(12, A(C_sub, 0.7f), FontStyle.Normal, TextAnchor.MiddleRight));
         }
 
-        // ---------------- 방 (참가자) ----------------
-        static void PageRoom()
+        // 맵 → 배포 → 준비 → 플레이 → 결과
+        static readonly string[] Steps = { "맵 선택", "맵 받기", "준비", "플레이", "결과" };
+        static int CurrentStep()
         {
-            if (!Session.InRoom) { Title("방", "아직 방에 없어요. 홈에서 방을 만들거나 참가하세요."); return; }
-            Title("방", $"참가자 {Session.Board.Count}/8   ·   {PhaseText()}");
-
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("친구 초대", S_btn, GUILayout.Width(140))) Net.InviteOverlay();
-            if (Net.IsHost)
+            switch (Session.Phase)
             {
-                GUI.enabled = Session.Phase == Phase.Distributing;
-                if (GUILayout.Button("받은 사람끼리 바로 시작", S_btn, GUILayout.Width(220))) Session.HostStartLoad();
-                GUI.enabled = true;
+                case Phase.Packing: case Phase.Distributing: return 1;
+                case Phase.Loading: case Phase.WaitingStart: case Phase.Countdown: return 2;
+                case Phase.Playing: return 3;
+                case Phase.Results: return 4;
             }
-            GUILayout.EndHorizontal();
-            GUILayout.Space(6);
-
-            _sPeers = GUILayout.BeginScrollView(_sPeers);
-            var list = Session.Board;
-            for (int i = 0; i < list.Count; i += 2)
-            {
-                GUILayout.BeginHorizontal();
-                PeerCard(list[i]);
-                if (i + 1 < list.Count) PeerCard(list[i + 1]);
-                GUILayout.EndHorizontal();
-            }
-            GUILayout.EndScrollView();
+            return 0;
         }
 
-        static void PeerCard(Entry p)
+        static void DrawStepper(Rect r)
         {
-            GUILayout.BeginVertical(S_card, GUILayout.Width(Col(2)), GUILayout.Height(92));
-            string crown = p.Id == Net.HostId ? $"<color=#{HexOf(C_gold)}>방장</color>  " : "";
-            string me = p.Id == Net.MyId ? $"  <color=#{HexOf(C_acc)}>(나)</color>" : "";
-            GUILayout.Label($"{crown}{Trim(p.Name, 18)}{me}", S_h2);
-            GUILayout.Label(StateText(p), S_sub);
-            if (p.State == PState.Downloading || p.State == PState.Paused) Bar(p.Download, 6);
-            GUILayout.EndVertical();
+            int cur = CurrentStep();
+            float seg = r.width / Steps.Length;
+            for (int i = 0; i < Steps.Length; i++)
+            {
+                float cx = r.x + seg * i + seg / 2f;
+                if (i < Steps.Length - 1)
+                    Fill(new Rect(cx + 12, r.y + 11, seg - 24, 2), i < cur ? C_acc : C_line);
+                Color dc = i < cur ? C_acc : i == cur ? C_acc : C_line;
+                Dot(new Vector2(cx, r.y + 12), i == cur ? 8 : 6, dc);
+                if (i == cur) { var o = GUI.color; GUI.color = A(Color.white, 0.25f + Mathf.PingPong(Time.unscaledTime, 0.5f) * 0.3f); Dot(new Vector2(cx, r.y + 12), 13, C_acc); GUI.color = o; }
+                GUI.Label(new Rect(cx - seg / 2f, r.y + 22, seg, 18), Steps[i], i == cur ? S_stepOn : S_stepOff);
+            }
         }
 
-        // ---------------- 맵 ----------------
-        static void PageMap()
+        // ---------------- 방 밖: 입구 ----------------
+        static void DrawEntrance(Rect b)
         {
-            if (!Session.InRoom) { Title("맵", "방에 들어가면 사용할 수 있어요."); return; }
-            if (!Net.IsHost) { MemberDownload(); return; }
+            float cx = b.x + b.width / 2f;
+            Orbit(new Vector2(cx, b.y + 110), 46, 18, 1.1f);
+            GUI.Label(new Rect(b.x, b.y + 170, b.width, 50), "같은 맵, 같은 순간.", Label(36, C_txt, FontStyle.Bold, TextAnchor.MiddleCenter));
+            GUI.Label(new Rect(b.x, b.y + 220, b.width, 28), "친구들과 동시에 플레이하고 정확도로 순위를 가려요", Label(16, C_sub, FontStyle.Normal, TextAnchor.MiddleCenter));
 
-            bool busy = Session.Phase == Phase.Packing || Session.InMatch;
-            Title("맵", Session.MapHash != null ? $"현재: {Esc(Session.MapTitle)} ({Session.MapSize / 1048576f:0.0}MB)" : "배포할 맵을 고르세요");
+            float cw = Mathf.Min(420, (b.width - 40) / 2f), ch = 210, top = b.y + 290;
+            var left = new Rect(cx - cw - 12, top, cw, ch);
+            var right = new Rect(cx + 12, top, cw, ch);
 
+            GUILayout.BeginArea(left, S_card);
+            GUILayout.Label("방 만들기", S_h2);
+            GUILayout.Label("내가 방장. 맵을 고르면 모두에게 자동으로 보내져요.\n최대 8명 · 서버 없이 Steam으로 연결", S_para);
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button("새 방 만들기", S_cta)) Net.CreateRoom(8);
+            GUILayout.EndArea();
+
+            GUILayout.BeginArea(right, S_card);
+            GUILayout.Label("참가하기", S_h2);
+            GUILayout.Label("Steam 초대를 수락하면 바로 들어와요.\n또는 친구에게 받은 로비 ID를 입력:", S_para);
+            GUILayout.FlexibleSpace();
             GUILayout.BeginHorizontal();
-            _search = GUILayout.TextField(_search, S_field);
-            if (GUILayout.Button(MapBrowser.Scanning ? "검색 중..." : "새로고침", S_btn, GUILayout.Width(120))) MapBrowser.Rescan();
-            GUILayout.EndHorizontal();
-            MapBrowser.ScanOnce();
-
-            GUILayout.BeginVertical(S_card, GUILayout.ExpandHeight(true));
-            _sMaps = GUILayout.BeginScrollView(_sMaps);
-            var q = _search.Trim();
-            int shown = 0;
-            foreach (var it in MapBrowser.Items)
-            {
-                if (q.Length > 0 && it.Label.IndexOf(q, System.StringComparison.OrdinalIgnoreCase) < 0 && (it.Author ?? "").IndexOf(q, System.StringComparison.OrdinalIgnoreCase) < 0) continue;
-                if (++shown > 300) break;
-                bool sel = it.Path == _mapPath;
-                if (GUILayout.Button($"{Trim(it.Label, 64)}   <color=#{HexOf(C_sub)}><size=12>{Trim(it.Author, 24)}</size></color>", sel ? S_rowOn : S_row)) _mapPath = it.Path;
-            }
-            if (MapBrowser.Items.Count == 0 && !MapBrowser.Scanning) GUILayout.Label("맵을 못 찾았어요. 아래에 .adofai 경로를 직접 넣어주세요.", S_para);
-            GUILayout.EndScrollView();
-            GUILayout.EndVertical();
-
-            GUILayout.BeginHorizontal();
-            _mapPath = GUILayout.TextField(_mapPath, S_field);
-            if (GUILayout.Button("최근 맵", S_btn, GUILayout.Width(100))) _mapPath = Game.DefaultLevelPath();
-            GUI.enabled = !busy && !string.IsNullOrEmpty(_mapPath);
-            if (GUILayout.Button("이 맵으로 배포", S_btnAcc, GUILayout.Width(180))) { Session.HostDistribute(_mapPath.Trim().Trim('"')); Page = Tab.Room; }
+            _joinId = GUILayout.TextField(_joinId, new GUIStyle(S_field) { fixedHeight = 58, fontSize = 18 });
+            bool ok = ulong.TryParse(_joinId.Trim(), out var lid);
+            GUI.enabled = ok;
+            if (GUILayout.Button("참가", S_ctaGhost, GUILayout.Width(100))) Net.Join(lid);
             GUI.enabled = true;
             GUILayout.EndHorizontal();
+            GUILayout.EndArea();
+
+            int cached = CacheCount();
+            if (cached > 0) GUI.Label(new Rect(b.x, top + ch + 18, b.width, 22), $"받아둔 맵 {cached}개 · {CacheSizeMB():0}MB  (설정에서 비우기)", Label(13, A(C_sub, 0.7f), FontStyle.Normal, TextAnchor.MiddleCenter));
         }
 
-        static void MemberDownload()
+        // ---------------- 왼쪽: 라인업 (8슬롯) ----------------
+        static void DrawLineup(Rect r)
         {
-            Title("맵", Session.MapHash != null ? $"{Esc(Session.MapTitle)} ({Session.MapSize / 1048576f:0.0}MB)" : "방장이 맵을 고르는 중...");
-            if (Session.Phase != Phase.Distributing || Session.MapSize <= 0) return;
-            GUILayout.BeginVertical(S_card);
-            if (Session.DlCancelled)
+            GUI.Label(new Rect(r.x + 4, r.y, r.width, 22), "라인업", S_section);
+            GUI.Label(new Rect(r.x, r.y, r.width - 4, 22), $"{Session.Board.Count} / 8", Label(13, C_sub, FontStyle.Bold, TextAnchor.MiddleRight));
+
+            float sh = Mathf.Min(70, (r.height - 34) / 8f - 8), y = r.y + 30;
+            var list = Session.Board;
+            for (int i = 0; i < 8; i++)
             {
-                GUILayout.Label("다운로드를 취소했어요 (이번 판은 관전)", S_txt);
-                if (GUILayout.Button("다시 받기", S_btn, GUILayout.Width(140))) Session.DlRetry();
+                var sr = new Rect(r.x, y, r.width, sh);
+                if (i < list.Count) DrawSlot(sr, list[i], i);
+                else if (GUI.Button(sr, "+  빈 자리 · 친구 초대", S_empty)) Net.InviteOverlay();
+                y += sh + 8;
             }
-            else if (!Session.DlActive) GUILayout.Label("맵 준비 완료! 다른 사람을 기다리는 중...", S_txt);
+        }
+
+        static void DrawSlot(Rect r, Entry p, int i)
+        {
+            bool me = p.Id == Net.MyId;
+            GUI.Box(r, "", me ? S_cardMe : S_card);
+            Dot(new Vector2(r.x + 26, r.y + r.height / 2f), 9, SlotColor(i));
+            float tx = r.x + 46;
+            string name = Trim(p.Name, 14);
+            GUI.Label(new Rect(tx, r.y + 10, r.width - 170, 24), name + (me ? $"  <color=#{HexOf(C_sub)}><size=12>나</size></color>" : ""), Label(16, C_txt, FontStyle.Bold));
+            if (p.Id == Net.HostId) GUI.Label(new Rect(tx, r.y + r.height - 28, 60, 20), "방장", Label(12, C_gold, FontStyle.Bold));
+
+            // 오른쪽 상태 알약
+            Color pc; string pt = PillText(p, out pc);
+            var size = Label(12, pc, FontStyle.Bold, TextAnchor.MiddleCenter).CalcSize(new GUIContent(pt)); size.x += 22;
+            var pr = new Rect(r.xMax - size.x - 14, r.y + (r.height - 24) / 2f, size.x, 24);
+            Pill(pr, pt, pc);
+
+            if (p.State == PState.Downloading || p.State == PState.Paused)
+            {
+                var br = new Rect(tx + (p.Id == Net.HostId ? 44 : 0), r.y + r.height - 18, r.width - (tx - r.x) - size.x - 40 - (p.Id == Net.HostId ? 44 : 0), 4);
+                Fill(br, C_line);
+                var o = GUI.color; GUI.color = Color.white;
+                GUI.DrawTexture(new Rect(br.x, br.y, br.width * Mathf.Clamp01(p.Download), br.height), T_accBar);
+                GUI.color = o;
+            }
+        }
+
+        static string PillText(Entry e, out Color c)
+        {
+            c = C_sub;
+            switch (e.State)
+            {
+                case PState.Lobby: return "대기";
+                case PState.Downloading: c = C_acc; return $"받는 중 {e.Download * 100:0}%";
+                case PState.Paused: c = C_gold; return $"일시정지 {e.Download * 100:0}%";
+                case PState.Cancelled: return "관전";
+                case PState.HasMap: c = C_acc; return "맵 준비됨";
+                case PState.Loading: c = C_ice; return "입장 중";
+                case PState.Loaded: c = C_gold; return "준비 전";
+                case PState.Ready: c = C_acc; return "준비 완료";
+                case PState.Playing: c = C_ice; return $"플레이 {e.Stats.Progress * 100:0}%";
+                case PState.Finished: c = C_acc; return $"완주 {e.Stats.Acc * 100:0.0}%";
+            }
+            return "";
+        }
+
+        static readonly System.Collections.Generic.Dictionary<Color, Texture2D> _pillTex = new System.Collections.Generic.Dictionary<Color, Texture2D>();
+        static void Pill(Rect r, string text, Color c)
+        {
+            if (!_pillTex.TryGetValue(c, out var t)) _pillTex[c] = t = Round(A(c, 0.16f), 11, A(c, 0.45f));
+            GUI.DrawTexture(r, t);
+            GUI.Label(r, text, Label(12, c, FontStyle.Bold, TextAnchor.MiddleCenter));
+        }
+
+        // ---------------- 오른쪽: 스테이지 ----------------
+        static void DrawStage(Rect r)
+        {
+            bool host = Net.IsHost;
+            // 맵 히어로 카드
+            var hero = new Rect(r.x, r.y, r.width, Mathf.Min(260, r.height * 0.42f));
+            GUI.Box(hero, "", S_card);
+            GUI.Label(new Rect(hero.x + 28, hero.y + 22, 300, 20), Session.MapHash != null ? "이번 판의 맵" : "맵", S_section);
+
+            if (Session.MapHash == null)
+            {
+                GUI.Label(new Rect(hero.x + 28, hero.y + 60, hero.width - 56, 46), host ? "어떤 맵으로 할까요?" : "방장이 맵을 고르는 중...", S_title);
+                GUI.Label(new Rect(hero.x + 28, hero.y + 112, hero.width - 56, 24), host ? "맵을 고르면 모두에게 자동으로 전송돼요. 이미 받은 사람은 건너뛰어요." : "맵이 정해지면 자동으로 받아요.", S_sub);
+            }
             else
             {
-                float p = (float)Session.DlReceived / Session.MapSize;
-                GUILayout.Label($"<color=#{HexOf(C_acc)}>{p * 100:0}%</color>   {Session.DlReceived / 1048576f:0.0} / {Session.MapSize / 1048576f:0.0}MB{(Session.DlPaused ? "   · 일시정지" : "")}", S_h2);
-                Bar(p, 8);
-                GUILayout.Space(8);
-                GUILayout.BeginHorizontal();
-                if (Session.DlPaused) { if (GUILayout.Button("재개", S_btn, GUILayout.Width(120))) Session.DlResume(); }
-                else if (GUILayout.Button("일시정지", S_btn, GUILayout.Width(120))) Session.DlPause();
-                if (GUILayout.Button("취소", S_btn, GUILayout.Width(120))) Session.DlCancel();
-                GUILayout.FlexibleSpace();
-                GUILayout.EndHorizontal();
+                string song = string.IsNullOrEmpty(Session.MapSong) ? Session.MapTitle : Session.MapSong;
+                GUI.Label(new Rect(hero.x + 28, hero.y + 50, hero.width - 56, 50), Trim(song, 40), S_title);
+                string meta = string.Join("   ·   ", new[] { Trim(Session.MapArtist, 30), string.IsNullOrEmpty(Session.MapAuthor) ? "" : "제작 " + Trim(Session.MapAuthor, 24), $"{Session.MapSize / 1048576f:0.0}MB" }.Where(x => !string.IsNullOrEmpty(x)).ToArray());
+                GUI.Label(new Rect(hero.x + 28, hero.y + 104, hero.width - 56, 24), meta, Label(16, C_sub));
+                // 모두 맵 받은 비율
+                var parts = Session.Board.Where(x => x.State != PState.Cancelled).ToList();
+                int have = parts.Count(x => x.State >= PState.HasMap);
+                if (Session.Phase == Phase.Distributing || Session.Phase == Phase.Packing)
+                {
+                    float avg = parts.Count == 0 ? 0 : parts.Average(x => x.State >= PState.HasMap ? 1f : x.Download);
+                    var br = new Rect(hero.x + 28, hero.yMax - 50, hero.width - 56, 8);
+                    Fill(br, C_line);
+                    GUI.DrawTexture(new Rect(br.x, br.y, br.width * avg, br.height), T_accBar);
+                    GUI.Label(new Rect(br.x, br.y - 28, br.width, 22), Session.Phase == Phase.Packing ? "맵 압축 중..." : $"{have}/{parts.Count}명 받음", Label(13, C_sub, FontStyle.Bold));
+                }
             }
+
+            // 상황별 패널 + 메인 버튼
+            var panel = new Rect(r.x, hero.yMax + 16, r.width, r.yMax - hero.yMax - 16);
+            GUILayout.BeginArea(panel);
+            GUILayout.BeginVertical(S_card, GUILayout.ExpandHeight(true));
+            if (host) HostPanel(); else MemberPanel();
             GUILayout.EndVertical();
+            GUILayout.EndArea();
         }
 
-        // ---------------- 결과 ----------------
-        static void PageResults()
+        static void HostPanel()
         {
-            Title("결과", Session.Results.Count > 0 ? "정확도 → X정확도 → 미스 순" : "아직 결과가 없어요");
-            if (Session.Results.Count == 0) return;
-            GUILayout.BeginVertical(S_card, GUILayout.ExpandHeight(true));
+            var ph = Session.Phase;
+            if (ph == Phase.Results)
+            {
+                GUILayout.Label("결과 대기", S_section);
+                GUILayout.Label("아직 플레이 중인 사람이 있어요. 모두 끝나면 결과가 나와요.", S_paraTxt);
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button("지금 결과 발표", S_ctaGhost)) Session.HostShowResults();
+            }
+            else if (ph == Phase.Lobby)
+            {
+                GUILayout.Label("다음 할 일", S_section);
+                GUILayout.Label(Session.MapHash == null ? "맵을 골라서 배포하세요." : "같은 맵으로 한 판 더 하거나, 다른 맵을 골라요.", S_paraTxt);
+                GUILayout.FlexibleSpace();
+                GUILayout.BeginHorizontal();
+                if (Session.MapHash != null && !string.IsNullOrEmpty(Session.HostLevelPath))
+                {
+                    if (GUILayout.Button("이 맵으로 한 판 더", S_cta)) Session.HostDistribute(Session.HostLevelPath);
+                    if (GUILayout.Button("다른 맵 고르기", S_ctaGhost, GUILayout.Width(220))) { _drawer = true; MapBrowser.ScanOnce(); }
+                }
+                else if (GUILayout.Button("맵 고르기", S_cta)) { _drawer = true; MapBrowser.ScanOnce(); }
+                GUILayout.EndHorizontal();
+            }
+            else if (ph == Phase.Packing || ph == Phase.Distributing)
+            {
+                GUILayout.Label("맵 보내는 중", S_section);
+                GUILayout.Label("모두 받으면 자동으로 레벨에 들어가요. 오래 걸리는 사람이 있으면 받은 사람끼리 먼저 시작할 수 있어요.", S_paraTxt);
+                GUILayout.FlexibleSpace();
+                GUILayout.BeginHorizontal();
+                GUI.enabled = ph == Phase.Distributing;
+                if (GUILayout.Button("받은 사람끼리 시작", S_ctaGhost)) Session.HostStartLoad();
+                GUI.enabled = true;
+                if (GUILayout.Button("다른 맵 고르기", S_ctaGhost, GUILayout.Width(220))) { _drawer = true; MapBrowser.ScanOnce(); }
+                GUILayout.EndHorizontal();
+            }
+            else
+            {
+                GUILayout.Label("진행 중", S_section);
+                GUILayout.Label("레벨에 들어가는 중이에요...", S_paraTxt);
+            }
+        }
+
+        static void MemberPanel()
+        {
+            var ph = Session.Phase;
+            if (ph == Phase.Distributing && Session.MapSize > 0)
+            {
+                if (Session.DlCancelled)
+                {
+                    GUILayout.Label("관전", S_section);
+                    GUILayout.Label("이번 판은 다운로드를 취소해서 관전해요.", S_paraTxt);
+                    GUILayout.FlexibleSpace();
+                    if (GUILayout.Button("다시 받고 참가하기", S_cta)) Session.DlRetry();
+                    return;
+                }
+                if (Session.DlActive)
+                {
+                    float p = (float)Session.DlReceived / Session.MapSize;
+                    GUILayout.Label("맵 받는 중", S_section);
+                    GUILayout.Label($"<color=#{HexOf(C_acc)}>{p * 100:0}%</color>   <size=16><color=#{HexOf(C_sub)}>{Session.DlReceived / 1048576f:0.0} / {Session.MapSize / 1048576f:0.0}MB{(Session.DlPaused ? "  ·  일시정지됨" : "")}</color></size>", Label(34, C_txt, FontStyle.Bold));
+                    Bar(p, 10);
+                    GUILayout.FlexibleSpace();
+                    GUILayout.BeginHorizontal();
+                    if (Session.DlPaused) { if (GUILayout.Button("이어 받기", S_cta)) Session.DlResume(); }
+                    else if (GUILayout.Button("일시정지", S_ctaGhost)) Session.DlPause();
+                    if (GUILayout.Button("취소하고 관전", S_ctaGhost, GUILayout.Width(200))) Session.DlCancel();
+                    GUILayout.EndHorizontal();
+                    return;
+                }
+                GUILayout.Label("준비 완료", S_section);
+                GUILayout.Label("맵을 다 받았어요. 다른 사람을 기다리면 자동으로 시작해요.", S_paraTxt);
+                return;
+            }
+            if (ph == Phase.Results)
+            {
+                GUILayout.Label("결과 대기", S_section);
+                GUILayout.Label("다른 사람이 끝나길 기다리는 중이에요.", S_paraTxt);
+                return;
+            }
+            GUILayout.Label("대기 중", S_section);
+            GUILayout.Label(Session.MapHash == null ? "방장이 맵을 고르면 자동으로 받아요." : "방장이 다음 판을 준비하는 중이에요.", S_paraTxt);
+        }
+
+        // ---------------- 결과 시상대 ----------------
+        static void DrawPodium(Rect r, bool inGame = false)
+        {
+            GUI.Box(r, "", S_card);
+            GUI.Label(new Rect(r.x + 28, r.y + 20, 300, 20), "결과", S_section);
+            string song = string.IsNullOrEmpty(Session.MapSong) ? Session.MapTitle : Session.MapSong;
+            GUI.Label(new Rect(r.x + 28, r.y + 40, r.width - 56, 30), Trim(song, 50), Label(20, C_txt, FontStyle.Bold));
+
+            var res = Session.Results;
+            float baseY = r.y + 300, colW = Mathf.Min(220, (r.width - 80) / 3f), cx = r.x + r.width / 2f;
+            int[] order = { 1, 0, 2 };              // 2등-1등-3등 배치
+            float[] heights = { 150, 110, 80 };
+            for (int k = 0; k < 3; k++)
+            {
+                int rank = order[k];
+                if (rank >= res.Count) continue;
+                var e = res[rank];
+                float x = cx + (k - 1) * (colW + 16) - colW / 2f, h = heights[rank];
+                Color c = rank == 0 ? C_gold : rank == 1 ? Hex("d8dee0") : Hex("e2a06a");
+                var block = new Rect(x, baseY - h, colW, h);
+                GUI.DrawTexture(block, Swatch(A(c, 0.18f)));
+                GUI.Label(new Rect(x, baseY - h + 8, colW, 40), (rank + 1).ToString(), Label(34, c, FontStyle.Bold, TextAnchor.MiddleCenter));
+                GUI.Label(new Rect(x, baseY - h - 64, colW, 26), Trim(e.Name, 12), Label(17, C_txt, FontStyle.Bold, TextAnchor.MiddleCenter));
+                GUI.Label(new Rect(x, baseY - h - 38, colW, 28), $"{e.Stats.Acc * 100:0.00}%", Label(22, c, FontStyle.Bold, TextAnchor.MiddleCenter));
+            }
+
+            // 세부 표
+            var tr = new Rect(r.x + 20, baseY + 20, r.width - 40, r.yMax - baseY - 100);
+            GUILayout.BeginArea(tr);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("", S_section, GUILayout.Width(36));
+            GUILayout.Label("이름", S_section, GUILayout.Width(200));
+            GUILayout.Label("정확도", S_section, GUILayout.Width(100));
+            GUILayout.Label("X정확도", S_section, GUILayout.Width(90));
+            GUILayout.Label("빠름 ← 판정 → 느림", S_section, GUILayout.Width(240));
+            GUILayout.Label("미스", S_section);
+            GUILayout.EndHorizontal();
             _sRes = GUILayout.BeginScrollView(_sRes);
             ResultsTable();
             GUILayout.EndScrollView();
-            GUILayout.EndVertical();
-            if (Net.IsHost && GUILayout.Button("다음 판 — 맵 고르기", S_btnAcc, GUILayout.Width(260))) { Session.HostBackToLobby(); Page = Tab.Map; }
+            GUILayout.EndArea();
+
+            if (inGame) return;
+            var br = new Rect(r.x + 24, r.yMax - 76, r.width - 48, 58);
+            GUILayout.BeginArea(br);
+            GUILayout.BeginHorizontal();
+            if (Net.IsHost)
+            {
+                if (!string.IsNullOrEmpty(Session.HostLevelPath) && GUILayout.Button("같은 맵으로 한 판 더", S_cta)) { Session.HostBackToLobby(); Session.HostDistribute(Session.HostLevelPath); }
+                if (GUILayout.Button("다른 맵 고르기", S_ctaGhost, GUILayout.Width(220))) { Session.HostBackToLobby(); _drawer = true; MapBrowser.ScanOnce(); }
+            }
+            else
+            {
+                GUILayout.Label("방장이 다음 판을 고르는 중...", S_sub);
+                GUILayout.FlexibleSpace();
+                if (Session.Phase != Phase.Results && GUILayout.Button("닫기", S_ctaGhost, GUILayout.Width(140))) ShowResults = false;
+            }
+            GUILayout.EndHorizontal();
+            GUILayout.EndArea();
         }
 
         static void ResultsTable()
@@ -552,142 +688,213 @@ namespace ADOFAIMulti
             foreach (var e in Session.Results)
             {
                 var s = e.Stats;
-                Color c = rank == 1 ? C_gold : rank == 2 ? Hex("d8dee0") : rank == 3 ? Hex("e2a06a") : C_txt;
-                GUILayout.BeginHorizontal(GUILayout.Height(40));
-                GUILayout.Label($"<color=#{HexOf(c)}><b>{rank}</b></color>", Label(24, c), GUILayout.Width(40));
-                GUILayout.Label($"{Trim(e.Name, 14)}{(s.Progress < 0.999f ? $"  <color=#{HexOf(C_sub)}><size=12>기권 {s.Progress * 100:0}%</size></color>" : "")}", S_txt, GUILayout.Width(220));
-                GUILayout.Label($"<color=#{HexOf(C_acc)}><b>{s.Acc * 100:0.00}%</b></color>", Label(18, C_acc), GUILayout.Width(110));
-                GUILayout.Label($"X {s.XAcc * 100:0.00}%", S_sub, GUILayout.Width(100));
-                GUILayout.Label($"<color=#{HexOf(C_fire)}>{s.TooEarly} {s.VeryEarly}</color> {s.EarlyPerfect} <color=#{HexOf(C_acc)}>{s.Perfect}</color> {s.LatePerfect} <color=#{HexOf(C_ice)}>{s.VeryLate} {s.TooLate}</color>", S_txt, GUILayout.Width(230));
-                GUILayout.Label($"미스 {s.Miss + s.Overload}", S_sub);
+                Color c = rank == 1 ? C_gold : rank == 2 ? Hex("d8dee0") : rank == 3 ? Hex("e2a06a") : C_sub;
+                GUILayout.BeginHorizontal(GUILayout.Height(34));
+                GUILayout.Label(rank.ToString(), Label(18, c, FontStyle.Bold), GUILayout.Width(36));
+                GUILayout.Label($"{Trim(e.Name, 14)}{(s.Progress < 0.999f ? $"  <color=#{HexOf(C_sub)}><size=12>기권 {s.Progress * 100:0}%</size></color>" : "")}", S_txt, GUILayout.Width(200));
+                GUILayout.Label($"{s.Acc * 100:0.00}%", Label(16, C_acc, FontStyle.Bold), GUILayout.Width(100));
+                GUILayout.Label($"{s.XAcc * 100:0.00}%", S_sub, GUILayout.Width(90));
+                GUILayout.Label($"<color=#{HexOf(C_fire)}>{s.TooEarly}  {s.VeryEarly}</color>  {s.EarlyPerfect}  <color=#{HexOf(C_acc)}><b>{s.Perfect}</b></color>  {s.LatePerfect}  <color=#{HexOf(C_ice)}>{s.VeryLate}  {s.TooLate}</color>", S_txt, GUILayout.Width(240));
+                GUILayout.Label((s.Miss + s.Overload).ToString(), S_sub);
                 GUILayout.EndHorizontal();
-                GUI.DrawTexture(GUILayoutUtility.GetRect(10, 1, GUILayout.ExpandWidth(true)), T_line);
+                Fill(GUILayoutUtility.GetRect(10, 1, GUILayout.ExpandWidth(true)), A(C_line, 0.7f));
                 rank++;
             }
         }
 
-        // ---------------- 설정 ----------------
-        static void PageSettings()
+        // ---------------- 맵 서랍 (방장) ----------------
+        static void DrawMapDrawer(float W, float H)
         {
-            Title("설정", null);
-
-            // ---- 테마 ----
-            GUILayout.BeginVertical(S_card);
-            GUILayout.Label("테마", S_h2);
+            GUI.DrawTexture(new Rect(0, 0, W, H), T_dim);
+            if (Event.current.type == EventType.MouseDown && Event.current.mousePosition.x < W - 600) { _drawer = false; Event.current.Use(); return; }
+            var r = new Rect(W - 600, 0, 600, H);
+            Fill(r, A(C_side, 0.98f));
+            Fill(new Rect(r.x, 0, 1, H), C_line);
+            GUILayout.BeginArea(new Rect(r.x + 28, 28, r.width - 56, H - 56));
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("맵 고르기", Label(26, C_txt, FontStyle.Bold));
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button(MapBrowser.Scanning ? "찾는 중..." : "새로고침", S_iconBtn, GUILayout.Width(110))) MapBrowser.Rescan();
+            if (GUILayout.Button("닫기", S_iconBtn, GUILayout.Width(80))) _drawer = false;
+            GUILayout.EndHorizontal();
+            GUILayout.Label("워크샵 · 게임 폴더 · 문서 · 다운로드에서 찾은 맵", S_sub);
+            GUILayout.Space(8);
+            GUI.SetNextControlName("mapSearch");
+            _search = GUILayout.TextField(_search, S_field);
+            if (_search.Length == 0 && Event.current.type == EventType.Repaint)
+            {
+                var lr = GUILayoutUtility.GetLastRect();
+                GUI.Label(new Rect(lr.x + 16, lr.y, lr.width, lr.height), "곡명 · 아티스트 · 제작자 검색", Label(15, A(C_sub, 0.6f)));
+            }
             GUILayout.Space(6);
+            _sMaps = GUILayout.BeginScrollView(_sMaps, GUILayout.ExpandHeight(true));
+            var q = _search.Trim();
+            int shown = 0;
+            foreach (var it in MapBrowser.Items)
+            {
+                if (q.Length > 0 && it.Label.IndexOf(q, System.StringComparison.OrdinalIgnoreCase) < 0 && (it.Author ?? "").IndexOf(q, System.StringComparison.OrdinalIgnoreCase) < 0) continue;
+                if (++shown > 300) break;
+                bool sel = it.Path == _mapPath;
+                string song = string.IsNullOrEmpty(it.Song) ? it.Folder : it.Song;
+                string sub = string.Join("  ·  ", new[] { it.Artist, string.IsNullOrEmpty(it.Author) ? "" : "제작 " + it.Author }.Where(x => !string.IsNullOrEmpty(x)).ToArray());
+                var rr = GUILayoutUtility.GetRect(100, 56, GUILayout.ExpandWidth(true));
+                if (GUI.Button(rr, "", sel ? S_rowOn : S_row)) _mapPath = it.Path;
+                GUI.Label(new Rect(rr.x + 16, rr.y + 7, rr.width - 32, 24), Trim(song, 48), Label(16, sel ? C_acc : C_txt, FontStyle.Bold));
+                GUI.Label(new Rect(rr.x + 16, rr.y + 29, rr.width - 32, 20), Trim(sub, 70), S_small);
+            }
+            if (MapBrowser.Items.Count == 0 && !MapBrowser.Scanning) GUILayout.Label("맵을 못 찾았어요. 아래에 .adofai 경로를 직접 넣어주세요.", S_para);
+            GUILayout.EndScrollView();
+            GUILayout.Space(8);
+            GUILayout.BeginHorizontal();
+            _mapPath = GUILayout.TextField(_mapPath, S_field);
+            if (GUILayout.Button("최근 맵", S_iconBtn, GUILayout.Width(90))) _mapPath = Game.DefaultLevelPath();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(6);
+            bool busy = Session.Phase == Phase.Packing || (Session.InMatch && Session.Phase != Phase.Results);
+            GUI.enabled = !busy && !string.IsNullOrEmpty(_mapPath);
+            if (GUILayout.Button("이 맵으로 시작", S_cta)) { _drawer = false; ShowResults = false; Session.HostDistribute(_mapPath.Trim().Trim('"')); }
+            GUI.enabled = true;
+            GUILayout.EndArea();
+        }
+
+        // ---------------- 설정 팝오버 ----------------
+        static void DrawSettings(float W, float H)
+        {
+            GUI.DrawTexture(new Rect(0, 0, W, H), T_dim);
+            var r = new Rect(W - 28 - 560, 72, 560, 430);
+            if (Event.current.type == EventType.MouseDown && !r.Contains(Event.current.mousePosition)) { _settings = false; Event.current.Use(); return; }
+            GUILayout.BeginArea(r, S_card);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("설정", Label(22, C_txt, FontStyle.Bold));
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button("닫기", S_iconBtn, GUILayout.Width(80))) _settings = false;
+            GUILayout.EndHorizontal();
+
+            Section("테마");
             GUILayout.BeginHorizontal();
             foreach (var th in Theme.All)
             {
                 bool on = th == Theme.Current;
-                var r = GUILayoutUtility.GetRect(150, 74, GUILayout.Width(150), GUILayout.Height(74));
-                if (GUI.Button(r, "", on ? S_rowOn : S_row)) Theme.Set(th);
+                var tr = GUILayoutUtility.GetRect(118, 70, GUILayout.Width(118), GUILayout.Height(70));
+                if (GUI.Button(tr, "", on ? S_rowOn : S_row)) Theme.Set(th);
                 if (Event.current.type == EventType.Repaint)
                 {
-                    // 미리보기: 배경/카드/강조색 스와치
-                    GUI.DrawTexture(new Rect(r.x + 12, r.y + 12, 26, 26), Swatch(th.Bg));
-                    GUI.DrawTexture(new Rect(r.x + 42, r.y + 12, 26, 26), Swatch(th.Card));
-                    GUI.DrawTexture(new Rect(r.x + 72, r.y + 12, 26, 26), Swatch(th.Acc));
-                    GUI.DrawTexture(new Rect(r.x + 102, r.y + 12, 26, 26), Swatch(th.Acc2));
+                    GUI.DrawTexture(new Rect(tr.x + 10, tr.y + 10, 22, 22), Swatch(th.Bg));
+                    GUI.DrawTexture(new Rect(tr.x + 36, tr.y + 10, 22, 22), Swatch(th.Card));
+                    GUI.DrawTexture(new Rect(tr.x + 62, tr.y + 10, 22, 22), Swatch(th.Acc));
+                    GUI.DrawTexture(new Rect(tr.x + 88, tr.y + 10, 22, 22), Swatch(th.Acc2));
                 }
-                GUI.Label(new Rect(r.x + 12, r.y + 44, r.width - 20, 22), th.Name, Label(13, on ? C_acc : C_txt, on ? FontStyle.Bold : FontStyle.Normal));
-                GUILayout.Space(8);
+                GUI.Label(new Rect(tr.x + 10, tr.y + 40, tr.width - 14, 22), th.Name, Label(12, on ? C_acc : C_txt, on ? FontStyle.Bold : FontStyle.Normal));
+                GUILayout.Space(4);
             }
-            GUILayout.FlexibleSpace();
             GUILayout.EndHorizontal();
-            GUILayout.EndVertical();
 
-            GUILayout.BeginVertical(S_card);
-            GUILayout.Label("업데이트", S_h2);
+            Section("업데이트");
             GUILayout.Label($"현재 v{Main.Version}   ·   {Updater.StatusText}", S_para);
-            if (Updater.Current == Updater.State.Failed) GUILayout.Label(Updater.Error, S_small);
-            GUILayout.EndVertical();
+            if (Updater.Current == Updater.State.Failed) GUILayout.Label(Esc(Updater.Error), S_para);
 
-            GUILayout.BeginVertical(S_card);
-            GUILayout.Label("받은 맵 캐시", S_h2);
-            GUILayout.Label($"{CacheCount()}개 · {CacheSizeMB():0.0}MB   ({MapPack.Root})", S_para);
-            GUI.enabled = !Session.InMatch;
-            if (GUILayout.Button("캐시 비우기", S_btn, GUILayout.Width(160))) { try { Directory.Delete(MapPack.Root, true); } catch { } }
+            Section("받은 맵 캐시");
+            GUILayout.BeginHorizontal();
+            GUILayout.Label($"{CacheCount()}개 · {CacheSizeMB():0.0}MB", S_sub);
+            GUILayout.FlexibleSpace();
+            GUI.enabled = !Session.InMatch && Session.Phase != Phase.Distributing;
+            if (GUILayout.Button("비우기", S_iconBtn, GUILayout.Width(90))) { try { Directory.Delete(MapPack.Root, true); } catch { } _cacheAt = -10; }
             GUI.enabled = true;
-            GUILayout.EndVertical();
+            GUILayout.EndHorizontal();
 
-            GUILayout.BeginVertical(S_card);
-            GUILayout.Label("단축키", S_h2);
-            GUILayout.Label("Ctrl + M  멀티 섬 열기/떠나기   ·   F5  준비   ·   Ctrl + Shift + Q  기권", S_para);
-            GUILayout.EndVertical();
+            Section("단축키");
+            GUILayout.Label("Ctrl + M  멀티 섬   ·   F5  준비   ·   Ctrl + Shift + Q  기권   ·   Esc  뒤로", S_para);
+            GUILayout.EndArea();
         }
 
         static void DrawConfirm()
         {
             GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), T_dim);
-            var r = new Rect((Screen.width - 440) / 2f, (Screen.height - 190) / 2f, 440, 190);
+            var r = new Rect((Screen.width - 460) / 2f, (Screen.height - 200) / 2f, 460, 200);
             GUILayout.BeginArea(r, S_card);
-            GUILayout.Label("섬을 떠날까요?", S_h2);
-            GUILayout.Label(Net.IsHost ? "방장이 떠나면 방이 사라져요." : "방에서 나가게 돼요. 다시 들어오려면 초대를 받아야 해요.", S_para);
+            GUILayout.Label("어디로 갈까요?", Label(22, C_txt, FontStyle.Bold));
+            GUILayout.Label(Net.IsHost ? "방장이 나가면 방이 사라져요." : "방에서 나가면 다시 들어오려면 초대가 필요해요.", S_para);
             GUILayout.FlexibleSpace();
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("방만 나가기", S_btn)) { _confirmLeave = false; Session.LeaveRoom(); Page = Tab.Home; }
-            if (GUILayout.Button("섬 떠나기", S_btnAcc)) { _confirmLeave = false; Session.LeaveRoom(); Island.Leave(); }
+            if (GUILayout.Button("방만 나가기", S_btn)) { _confirmLeave = false; Session.LeaveRoom(); ShowResults = false; }
+            if (GUILayout.Button("메인 메뉴로", S_btnAcc)) { _confirmLeave = false; Session.LeaveRoom(); Island.Leave(); }
             if (GUILayout.Button("취소", S_btn)) _confirmLeave = false;
             GUILayout.EndHorizontal();
             GUILayout.EndArea();
         }
 
+        static void AskLeave()
+        {
+            if (Session.InRoom) _confirmLeave = true;
+            else Island.Leave();
+        }
+
+        static void Bar(float p, float h)
+        {
+            var r = GUILayoutUtility.GetRect(100, h, GUILayout.ExpandWidth(true));
+            Fill(r, C_line);
+            GUI.DrawTexture(new Rect(r.x, r.y, r.width * Mathf.Clamp01(p), r.height), T_accBar);
+        }
+
         // =====================================================================
-        //  레벨 안 (랭킹 · 카운트다운 · 결과)
+        //  레벨 안 (실시간 순위 · 카운트다운 · 결과)
         // =====================================================================
         static void DrawInGame()
         {
             var ph = Session.Phase;
             var board = Session.Board.Where(e => e.State >= PState.Loading && e.State != PState.Cancelled).ToList();
-            float h = 40 + board.Count * 26, y = Screen.height * 0.22f;
-            var box = new Rect(10, y, 300, h);
-            GUI.color = new Color(1, 1, 1, 0.92f);
+            float rowH = 34, w = 300, y0 = Screen.height * 0.2f;
+            var box = new Rect(12, y0, w, 34 + board.Count * rowH);
+            GUI.color = A(Color.white, 0.94f);
             GUI.Box(box, "", S_card);
             GUI.color = Color.white;
-            GUI.Label(new Rect(box.x + 14, box.y + 8, 260, 22), "실시간 랭킹", Label(14, C_sub, FontStyle.Bold));
-            int rank = 1;
-            foreach (var e in board)
+            GUI.Label(new Rect(box.x + 16, box.y + 8, 200, 18), "실시간 순위", S_section);
+            for (int i = 0; i < board.Count; i++)
             {
-                float ry = box.y + 32 + (rank - 1) * 26;
+                var e = board[i];
+                float ry = box.y + 30 + i * rowH;
                 bool me = e.Id == Net.MyId;
-                GUI.Label(new Rect(box.x + 14, ry, 24, 24), rank.ToString(), Label(15, rank == 1 ? C_gold : C_sub, FontStyle.Bold));
-                GUI.Label(new Rect(box.x + 36, ry, 120, 24), Trim(e.Name, 9) + (e.State == PState.Finished ? " (완주)" : ""), Label(15, me ? C_acc : C_txt));
-                GUI.Label(new Rect(box.x + 150, ry, 80, 24), $"{e.Stats.Acc * 100:0.00}%", Label(15, me ? C_acc : C_txt, FontStyle.Bold, TextAnchor.MiddleRight));
-                GUI.Label(new Rect(box.x + 236, ry, 54, 24), $"{e.Stats.Progress * 100:0}%", Label(12, C_sub, FontStyle.Normal, TextAnchor.MiddleRight));
-                rank++;
+                int slot = Session.Board.IndexOf(e);
+                if (me) Fill(new Rect(box.x + 6, ry, w - 12, rowH - 4), A(C_acc, 0.10f));
+                GUI.Label(new Rect(box.x + 14, ry, 22, rowH - 4), (i + 1).ToString(), Label(15, i == 0 ? C_gold : C_sub, FontStyle.Bold));
+                Dot(new Vector2(box.x + 44, ry + (rowH - 4) / 2f), 5, SlotColor(slot < 0 ? i : slot));
+                GUI.Label(new Rect(box.x + 56, ry, 130, rowH - 4), Trim(e.Name, 10) + (e.State == PState.Finished ? "  <size=11>완주</size>" : ""), Label(15, me ? C_acc : C_txt, me ? FontStyle.Bold : FontStyle.Normal));
+                GUI.Label(new Rect(box.x + 180, ry, 104, rowH - 4), $"{e.Stats.Acc * 100:0.00}%", Label(15, me ? C_acc : C_txt, FontStyle.Bold, TextAnchor.MiddleRight));
+                Fill(new Rect(box.x + 56, ry + rowH - 8, (w - 72) * Mathf.Clamp01(e.Stats.Progress), 2), A(SlotColor(slot < 0 ? i : slot), 0.7f));
             }
 
             if (ph == Phase.WaitingStart)
-                Banner(Session.MyReady ? "준비 완료 · 다른 사람을 기다리는 중" : "<color=#" + HexOf(C_acc) + ">F5</color> 를 눌러 준비");
+                Banner(Session.MyReady ? "준비 완료 · 다른 사람을 기다리는 중" : $"<color=#{HexOf(C_acc)}>F5</color>  를 눌러 준비");
             else if (ph == Phase.Countdown)
             {
                 int n = Mathf.CeilToInt(Session.CountdownLeft);
-                GUI.Label(new Rect(0, Screen.height * 0.3f, Screen.width, 140), n > 0 ? n.ToString() : "GO!", S_big);
+                GUI.Label(new Rect(0, Screen.height * 0.3f, Screen.width, 150), n > 0 ? n.ToString() : "GO!", S_big);
             }
             else if (ph == Phase.Results)
             {
                 if (Session.Results.Count > 0)
                 {
                     GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), T_dim);
-                    var r = new Rect((Screen.width - 860) / 2f, (Screen.height - 460) / 2f, 860, 460);
-                    GUILayout.BeginArea(r, S_card);
-                    GUILayout.Label("결과", S_h1);
-                    ResultsTable();
-                    GUILayout.FlexibleSpace();
-                    if (Net.IsHost) { if (GUILayout.Button("모두 멀티 섬으로", S_btnAcc)) Session.HostBackToLobby(); }
-                    else GUILayout.Label("방장이 섬으로 돌아가면 같이 이동해요", S_sub);
-                    GUILayout.EndArea();
+                    var r = new Rect((Screen.width - 900) / 2f, (Screen.height - 560) / 2f, 900, 560);
+                    DrawPodium(r, true);
+                    if (Net.IsHost)
+                    {
+                        var br = new Rect(r.x + 24, r.yMax - 76, r.width - 48, 58);
+                        GUILayout.BeginArea(br);
+                        if (GUILayout.Button("모두 멀티 섬으로", S_cta)) Session.HostBackToLobby();
+                        GUILayout.EndArea();
+                    }
                 }
                 else Banner("완주! 다른 사람을 기다리는 중...");
             }
 
             if (ph == Phase.Countdown || ph == Phase.Playing)
-                GUI.Label(new Rect(Screen.width - 240, Screen.height - 30, 230, 24), "기권  Ctrl + Shift + Q", Label(12, C_sub, FontStyle.Normal, TextAnchor.MiddleRight));
+                GUI.Label(new Rect(Screen.width - 260, Screen.height - 30, 248, 24), "기권  Ctrl + Shift + Q", Label(12, C_sub, FontStyle.Normal, TextAnchor.MiddleRight));
         }
 
         static void Banner(string text)
         {
-            var r = new Rect((Screen.width - 520) / 2f, Screen.height * 0.1f, 520, 64);
+            var r = new Rect((Screen.width - 560) / 2f, Screen.height * 0.1f, 560, 66);
             GUI.Box(r, "", S_card);
             GUI.Label(r, text, Label(22, C_txt, FontStyle.Bold, TextAnchor.MiddleCenter));
         }
@@ -709,33 +916,23 @@ namespace ADOFAIMulti
             return "-";
         }
 
-        static string StateText(Entry e)
+        // 디스크 조회는 3초에 한 번만 (OnGUI는 프레임마다 여러 번 불림)
+        static int _cacheCount; static float _cacheMB, _cacheAt = -10;
+        static void RefreshCache()
         {
-            switch (e.State)
+            if (Time.unscaledTime - _cacheAt < 3f) return;
+            _cacheAt = Time.unscaledTime;
+            try
             {
-                case PState.Lobby: return "대기";
-                case PState.Downloading: return $"다운로드 {e.Download * 100:0}%";
-                case PState.Paused: return $"일시정지 {e.Download * 100:0}%";
-                case PState.Cancelled: return "다운 취소 (관전)";
-                case PState.HasMap: return $"<color=#{HexOf(C_acc)}>맵 준비됨</color>";
-                case PState.Loading: return "로딩 중";
-                case PState.Loaded: return "레벨 입장 · 준비 안 됨";
-                case PState.Ready: return $"<color=#{HexOf(C_acc)}>준비</color>";
-                case PState.Playing: return $"플레이 중 {e.Stats.Progress * 100:0}%";
-                case PState.Finished: return "완주";
+                _cacheCount = Directory.Exists(MapPack.Root) ? Directory.GetDirectories(MapPack.Root).Length : 0;
+                _cacheMB = Directory.Exists(MapPack.Root) ? Directory.GetFiles(MapPack.Root, "*", SearchOption.AllDirectories).Sum(f => new FileInfo(f).Length) / 1048576f : 0;
             }
-            return "";
+            catch { _cacheCount = 0; _cacheMB = 0; }
         }
+        static int CacheCount() { RefreshCache(); return _cacheCount; }
+        static float CacheSizeMB() { RefreshCache(); return _cacheMB; }
 
-        static int CacheCount() { try { return Directory.Exists(MapPack.Root) ? Directory.GetDirectories(MapPack.Root).Length : 0; } catch { return 0; } }
-        static float CacheSizeMB()
-        {
-            try { return Directory.Exists(MapPack.Root) ? Directory.GetFiles(MapPack.Root, "*", SearchOption.AllDirectories).Sum(f => new FileInfo(f).Length) / 1048576f : 0; }
-            catch { return 0; }
-        }
-
-        static string StripTags(string s) => System.Text.RegularExpressions.Regex.Replace(s ?? "", "<[^>]+>", "");
-        static string Esc(string s) => (s ?? "").Replace("<", "\uFF1C").Replace(">", "\uFF1E");
+        static string Esc(string s) => (s ?? "").Replace("<", "＜").Replace(">", "＞");
         static string Trim(string s, int n) => string.IsNullOrEmpty(s) ? "" : Esc(s.Length > n ? s.Substring(0, n) + "…" : s);
     }
 }

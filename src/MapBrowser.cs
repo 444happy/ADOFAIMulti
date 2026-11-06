@@ -78,6 +78,8 @@ namespace ADOFAIMulti
             }
         }
 
+        public static Item ReadInfo(string file) { try { return Read(file); } catch { return null; } }
+
         static Item Read(string file)
         {
             // 앞부분 settings만 읽으면 충분 (맵 데이터는 클 수 있음)
