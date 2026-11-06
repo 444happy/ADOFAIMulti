@@ -34,7 +34,7 @@ namespace ADOFAIMulti
     public static class Net
     {
         // 중계 서버 주소: 시작할 때 GitHub release/relay.txt 에서 받아옴 (서버를 바꿔도 모드 업데이트 불필요)
-        public const string DefaultRelay = "wss://adofai-multi-relay.444happy.workers.dev";
+        public const string DefaultRelay = "wss://adofai-multi-relay.444happy123.workers.dev";
         public static string RelayUrl = DefaultRelay;
         const string LobbyKey = "adofaimulti";
         const string CodeChars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";   // 헷갈리는 0/O/1/I 제외

@@ -44,6 +44,7 @@ dotnet "$CSC" -nologo -noconfig -nostdlib -target:exe -platform:anycpu -langvers
 
 # 4) 릴리스 파일
 cp "$BUILD/ADOFAIMulti.dll" "$BUILD/Info.json" "$OUT/"
+echo "wss://adofai-multi-relay.444happy123.workers.dev" > "$OUT/relay.txt"
 TMP=$(mktemp -d); mkdir -p "$TMP/umm/ADOFAIMulti" "$TMP/inst"
 cp "$BUILD/ADOFAIMulti.dll" "$BUILD/Info.json" "$TMP/umm/ADOFAIMulti/"
 (cd "$TMP/umm" && zip -q -r -X "$OUT/ADOFAIMulti_UMM.zip" ADOFAIMulti </dev/null)
