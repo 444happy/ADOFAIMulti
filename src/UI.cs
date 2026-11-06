@@ -354,7 +354,7 @@ namespace ADOFAIMulti
             if (Session.InRoom)
             {
                 // 로고(~260px)와 오른쪽 버튼(~540px) 사이에 맞춰 배치
-                float left = 280, right = W - 28 - 540;
+                float left = 280, right = W - 28 - (Net.IsHost ? 644 : 540);
                 float sw = Mathf.Min(660, right - left);
                 if (sw >= 320) DrawStepper(new Rect(left + (right - left - sw) / 2f, 22, sw, 40));
             }
@@ -366,6 +366,12 @@ namespace ADOFAIMulti
             if (Session.InRoom)
             {
                 if (Net.CanInvite) { x -= 116; if (GUI.Button(new Rect(x, 24, 108, 36), "Steam 초대", S_iconBtn)) Net.InviteOverlay(); }
+                if (Net.IsHost)
+                {
+                    x -= 104;
+                    if (GUI.Button(new Rect(x, 24, 96, 36), Net.RoomPublic ? "공개" : "비공개", Net.RoomPublic ? S_rowOn : S_iconBtn))
+                    { Net.SetPublic(!Net.RoomPublic); Session.Notice = Net.RoomPublic ? "공개 방이 됐어요 — 목록에 표시돼요" : "비공개 방이 됐어요 — 코드로만 들어와요"; }
+                }
                 if (!string.IsNullOrEmpty(Net.RoomCode))
                 {
                     x -= 196;
@@ -432,40 +438,99 @@ namespace ADOFAIMulti
             }
         }
 
-        // ---------------- 방 밖: 입구 ----------------
+        // ---------------- 방 밖: 입구 (공개 방 목록 + 방 만들기/코드로 참가) ----------------
+        static string _roomName = "";
+        static bool _newPublic = true;
+        static Vector2 _sRooms;
+
         static void DrawEntrance(Rect b)
         {
-            float cx = b.x + b.width / 2f;
-            Orbit(new Vector2(cx, b.y + 110), 46, 18, 1.1f);
-            GUI.Label(new Rect(b.x, b.y + 170, b.width, 50), "같은 맵, 같은 순간.", Label(36, C_txt, FontStyle.Bold, TextAnchor.MiddleCenter));
-            GUI.Label(new Rect(b.x, b.y + 220, b.width, 28), "친구들과 동시에 플레이하고 정확도로 순위를 가려요", Label(16, C_sub, FontStyle.Normal, TextAnchor.MiddleCenter));
+            RoomList.Tick(Runner.Instance);
+            float rw = Mathf.Clamp(b.width * 0.36f, 340, 460);
+            var left = new Rect(b.x, b.y, b.width - rw - 24, b.height);
+            var right = new Rect(left.xMax + 24, b.y, rw, b.height);
 
-            float cw = Mathf.Min(420, (b.width - 40) / 2f), ch = 210, top = b.y + 290;
-            var left = new Rect(cx - cw - 12, top, cw, ch);
-            var right = new Rect(cx + 12, top, cw, ch);
+            // ---- 왼쪽: 공개 방 목록 ----
+            GUI.Label(new Rect(left.x + 4, left.y, 300, 22), "공개 방", S_section);
+            string info = !string.IsNullOrEmpty(RoomList.Error) ? RoomList.Error : !RoomList.Loaded ? "불러오는 중..." : $"{RoomList.Rooms.Count}개";
+            GUI.Label(new Rect(left.x, left.y, left.width - 110, 22), info, Label(13, C_sub, FontStyle.Normal, TextAnchor.MiddleRight));
+            if (GUI.Button(new Rect(left.xMax - 100, left.y - 6, 100, 32), RoomList.Loading ? "..." : "새로고침", S_iconBtn)) RoomList.RefreshNow();
 
-            GUILayout.BeginArea(left, S_card);
-            GUILayout.Label("방 만들기", S_h2);
-            GUILayout.Label("내가 방장. 방 코드를 친구에게 알려주면 돼요.\n최대 8명 · Steam 오프라인이어도 OK", S_para);
-            GUILayout.FlexibleSpace();
-            if (GUILayout.Button("새 방 만들기", S_cta)) Net.CreateRoom();
+            var listArea = new Rect(left.x, left.y + 32, left.width, left.height - 32);
+            GUILayout.BeginArea(listArea);
+            _sRooms = GUILayout.BeginScrollView(_sRooms);
+            if (RoomList.Loaded && RoomList.Rooms.Count == 0)
+            {
+                GUILayout.Space(60);
+                GUILayout.Label("지금 열린 공개 방이 없어요", Label(20, C_txt, FontStyle.Bold, TextAnchor.MiddleCenter));
+                GUILayout.Label("오른쪽에서 방을 만들어 보세요", Label(14, C_sub, FontStyle.Normal, TextAnchor.MiddleCenter));
+            }
+            foreach (var rm in RoomList.Rooms) DrawRoomCard(rm);
+            GUILayout.EndScrollView();
             GUILayout.EndArea();
 
-            GUILayout.BeginArea(right, S_card);
-            GUILayout.Label("참가하기", S_h2);
-            GUILayout.Label("친구에게 받은 방 코드를 입력하세요.\nSteam 초대를 수락해도 바로 들어와요.", S_para);
-            GUILayout.FlexibleSpace();
+            // ---- 오른쪽: 방 만들기 / 코드로 참가 ----
+            GUILayout.BeginArea(right);
+            GUILayout.BeginVertical(S_card);
+            GUILayout.Label("방 만들기", S_h2);
+            GUILayout.Space(4);
+            GUILayout.Label("방 이름", S_small);
+            SearchField(ref _roomName, Net.MyName + "의 방");
+            if (_roomName.Length > 40) _roomName = _roomName.Substring(0, 40);
+            GUILayout.Space(6);
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("공개", _newPublic ? S_rowOn : S_row, GUILayout.Height(38))) _newPublic = true;
+            if (GUILayout.Button("비공개", !_newPublic ? S_rowOn : S_row, GUILayout.Height(38))) _newPublic = false;
+            GUILayout.EndHorizontal();
+            GUILayout.Label(_newPublic ? "공개 방 목록에 떠서 누구나 들어올 수 있어요" : "방 코드를 아는 사람만 들어올 수 있어요", S_para);
+            GUILayout.Space(8);
+            if (GUILayout.Button("새 방 만들기", S_cta)) Net.CreateRoom(_newPublic, _roomName);
+            GUILayout.EndVertical();
+
+            GUILayout.Space(10);
+            GUILayout.BeginVertical(S_card);
+            GUILayout.Label("코드로 참가", S_h2);
+            GUILayout.Label("비공개 방은 방 코드로 들어가요. Steam 초대를 수락해도 바로 들어와요.", S_para);
+            GUILayout.Space(6);
             GUILayout.BeginHorizontal();
             _joinId = Net.NormalizeCode(GUILayout.TextField(_joinId, 8, new GUIStyle(S_field) { fixedHeight = 58, fontSize = 24, fontStyle = FontStyle.Bold }));
-            bool ok = Net.IsValidCode(_joinId);
-            GUI.enabled = ok;
+            GUI.enabled = Net.IsValidCode(_joinId);
             if (GUILayout.Button("참가", S_ctaGhost, GUILayout.Width(100))) Net.Join(_joinId);
             GUI.enabled = true;
             GUILayout.EndHorizontal();
-            GUILayout.EndArea();
+            GUILayout.EndVertical();
 
             int cached = CacheCount();
-            if (cached > 0) GUI.Label(new Rect(b.x, top + ch + 18, b.width, 22), $"받아둔 맵 {cached}개 · {CacheSizeMB():0}MB  (설정에서 비우기)", Label(13, A(C_sub, 0.7f), FontStyle.Normal, TextAnchor.MiddleCenter));
+            if (cached > 0) { GUILayout.Space(8); GUILayout.Label($"받아둔 맵 {cached}개 · {CacheSizeMB():0}MB", Label(12, A(C_sub, 0.7f), FontStyle.Normal, TextAnchor.MiddleCenter)); }
+            GUILayout.EndArea();
+        }
+
+        static void DrawRoomCard(RoomList.Room rm)
+        {
+            var r = GUILayoutUtility.GetRect(100, 86, GUILayout.ExpandWidth(true));
+            r = new Rect(r.x, r.y, r.width - 4, r.height - 8);
+            bool canJoin = rm.SameVersion && !rm.Full && !rm.InGame;
+            if (GUI.Button(r, "", canJoin ? S_cardBtn : S_card) && canJoin) Net.Join(rm.Code);
+
+            // 왼쪽: 인원 원형
+            var cr = new Rect(r.x + 18, r.y + (r.height - 50) / 2f, 50, 50);
+            GUI.DrawTexture(cr, Swatch(A(canJoin ? C_acc : C_sub, 0.14f)));
+            GUI.Label(cr, $"{rm.Count}<size=12>/{rm.Max}</size>", Label(17, canJoin ? C_acc : C_sub, FontStyle.Bold, TextAnchor.MiddleCenter));
+
+            float tx = cr.xMax + 16, tw = r.xMax - tx - 150;
+            GUI.Label(new Rect(tx, r.y + 12, tw, 26), Trim(rm.Name, 34), Label(17, C_txt, FontStyle.Bold));
+            string song = string.IsNullOrEmpty(rm.Song) ? "맵 고르는 중" : Trim(rm.Song, 30) + (string.IsNullOrEmpty(rm.Artist) ? "" : "  ·  " + Trim(rm.Artist, 18));
+            GUI.Label(new Rect(tx, r.y + 40, tw, 20), $"방장 {Trim(rm.Host, 14)}   ·   {song}", S_small);
+
+            // 오른쪽: 상태
+            string st; Color sc;
+            if (!rm.SameVersion) { st = "버전 다름 v" + Trim(rm.Ver, 10); sc = C_sub; }
+            else if (rm.Full) { st = "가득 참"; sc = C_sub; }
+            else if (rm.InGame) { st = rm.Phase == "results" ? "결과 보는 중" : "게임 중"; sc = C_gold; }
+            else if (rm.Phase == "distributing") { st = "맵 받는 중 · 입장"; sc = C_acc; }
+            else { st = "입장"; sc = C_acc; }
+            float w = 22 + Label(12, sc, FontStyle.Bold).CalcSize(new GUIContent(st)).x;
+            Pill(new Rect(r.xMax - w - 18, r.y + (r.height - 26) / 2f, w, 26), Esc(st), sc);
         }
 
         // ---------------- 왼쪽: 라인업 (8슬롯) ----------------

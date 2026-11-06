@@ -369,6 +369,13 @@ namespace ADOFAIMulti
         {
             if (_pendingJoin != null && !Game.IsScnGame) { var code = _pendingJoin; _pendingJoin = null; RequestJoin(code); }
             if (!InRoom) return;
+            if (Net.IsHost)
+            {
+                string ph = Phase == Phase.Packing || Phase == Phase.Distributing ? "distributing"
+                          : Phase == Phase.Results ? "results"
+                          : Phase >= Phase.Loading ? "playing" : "lobby";
+                Net.PublishMeta(ph, MapHash != null ? MapSong : "", MapHash != null ? MapArtist : "");
+            }
             // 방에 있는 동안 메뉴로 나오면 항상 멀티 로비 화면 (멀티는 로비 안에서만)
             if (!Game.IsScnGame && !Island.InIsland && !Island.Busy && Phase != Phase.Loading) Island.Enter();
             if (Game.InGame && Input.GetKeyDown(KeyCode.Q) && Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.LeftShift)) Forfeit();

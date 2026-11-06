@@ -36,6 +36,7 @@ namespace ADOFAIMulti
         // 중계 서버 주소: 시작할 때 GitHub release/relay.txt 에서 받아옴 (서버를 바꿔도 모드 업데이트 불필요)
         public const string DefaultRelay = "wss://adofai-multi-relay.444happy123.workers.dev";
         public static string RelayUrl = DefaultRelay;
+        public static string HttpBase => RelayUrl.Replace("wss://", "https://").Replace("ws://", "http://");
         const string LobbyKey = "adofaimulti";
         const string CodeChars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";   // 헷갈리는 0/O/1/I 제외
 
@@ -119,10 +120,38 @@ namespace ADOFAIMulti
         public static string NormalizeCode(string s) => new string((s ?? "").ToUpperInvariant().Where(char.IsLetterOrDigit).ToArray());
         public static bool IsValidCode(string s) { var c = NormalizeCode(s); return c.Length >= 4 && c.Length <= 8; }
 
-        public static void CreateRoom()
+        // 방 설정 (방장)
+        public static bool RoomPublic;
+        public static string RoomName = "";
+        static string _lastMeta;
+
+        public static void CreateRoom(bool isPublic, string roomName)
         {
             if (_relay != null) return;
+            RoomPublic = isPublic;
+            RoomName = (roomName ?? "").Trim();
             Connect(NewCode(), true);
+        }
+
+        /// <summary>방장: 공개 여부 바꾸기 (서버의 공개 방 목록에 바로 반영)</summary>
+        public static void SetPublic(bool isPublic)
+        {
+            if (!IsHost) return;
+            RoomPublic = isPublic;
+            _lastMeta = null;
+        }
+
+        static string Js(string s) => "\"" + (s ?? "").Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", " ").Replace("\r", " ").Replace("\t", " ") + "\"";
+
+        /// <summary>방장: 방 정보(공개·이름·단계·맵)가 바뀌면 서버에 알림 → 공개 방 목록 갱신</summary>
+        public static void PublishMeta(string phase, string song, string artist)
+        {
+            if (!IsHost || _relay == null) return;
+            string meta = "{\"t\":\"meta\",\"public\":" + (RoomPublic ? "true" : "false") + ",\"name\":" + Js(RoomName) +
+                          ",\"phase\":" + Js(phase) + ",\"song\":" + Js(song) + ",\"artist\":" + Js(artist) + "}";
+            if (meta == _lastMeta) return;
+            _lastMeta = meta;
+            _relay.SendText(meta);
         }
 
         public static void Join(string code)
@@ -133,10 +162,11 @@ namespace ADOFAIMulti
 
         static void Connect(string code, bool host)
         {
-            MyId = NewId(); HostId = 0; Members.Clear(); _welcomed = false; _hostMode = host;
+            MyId = NewId(); HostId = 0; Members.Clear(); _welcomed = false; _hostMode = host; _lastMeta = null;
             RoomCode = code;
             Status = host ? "방 만드는 중..." : $"방 {code} 에 들어가는 중...";
             string url = $"{RelayUrl}/room/{code}?id={MyId}&host={(host ? 1 : 0)}&v={Uri.EscapeDataString(Main.Version)}&name={Uri.EscapeDataString(MyName)}";
+            if (host) url += $"&pub={(RoomPublic ? 1 : 0)}&rname={Uri.EscapeDataString(RoomName ?? "")}";
             Main.Log($"Relay connect {(host ? "host" : "join")} {code}");
             _relay = new RelayClient();
             _relay.Connect(url);
