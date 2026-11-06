@@ -1,7 +1,7 @@
 {
-  "Version": "0.7.1",
+  "Version": "0.8.0",
   "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
   "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
-  "Sha256": "f41aefd205dbb23dbe9ec0d6e194e5d01f41db28cbc3a708e9804a64f3eefba0",
-  "Notes": "업데이트 주기 확인, 지금 확인 버튼"
+  "Sha256": "24e890cb2f12c3e4f5aa1c16649aa2cc1f7206a979c15645d93bc00eeb093ef5",
+  "Notes": "메인 섬 멀티 포탈로 입장"
 }

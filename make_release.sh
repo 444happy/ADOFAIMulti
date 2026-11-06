@@ -48,7 +48,7 @@ TMP=$(mktemp -d); mkdir -p "$TMP/umm/ADOFAIMulti" "$TMP/inst"
 cp "$BUILD/ADOFAIMulti.dll" "$BUILD/Info.json" "$TMP/umm/ADOFAIMulti/"
 (cd "$TMP/umm" && zip -q -r -X "$OUT/ADOFAIMulti_UMM.zip" ADOFAIMulti </dev/null)
 cp "$BUILD/ADOFAIMulti_Installer.exe" "$TMP/inst/"
-printf '1. UnityModManager(UMM)를 먼저 설치하세요: https://www.nexusmods.com/site/mods/21\r\n2. 얼불춤을 끄고 ADOFAIMulti_Installer.exe 실행 -> 1 입력\r\n3. "Windows의 PC 보호" 창이 뜨면 "추가 정보 -> 실행"\r\n4. 메인 메뉴 오른쪽 아래 [멀티플레이] 버튼 또는 Ctrl + M\r\n5. 이후 업데이트는 게임 실행 시 자동으로 받아집니다 (재시작하면 적용)\r\n' > "$TMP/inst/읽어주세요.txt"
+printf '1. UnityModManager(UMM)를 먼저 설치하세요: https://www.nexusmods.com/site/mods/21\r\n2. 얼불춤을 끄고 ADOFAIMulti_Installer.exe 실행 -> 1 입력\r\n3. "Windows의 PC 보호" 창이 뜨면 "추가 정보 -> 실행"\r\n4. 메인 섬에 생기는 "멀티" 포탈로 이동\r\n5. 이후 업데이트는 게임 실행 시 자동으로 받아집니다 (재시작하면 적용)\r\n' > "$TMP/inst/읽어주세요.txt"
 (cd "$TMP/inst" && zip -q -X "$OUT/ADOFAIMulti_Installer.zip" * </dev/null)
 rm -rf "$TMP"
 

@@ -226,12 +226,30 @@ namespace ADOFAIMulti
         static void DrawPortal()
         {
             if (Updater.Current == Updater.State.ReadyToRestart)
-                GUI.Label(new Rect(Screen.width - 420, Screen.height - 128, 400, 22), $"멀티 v{Updater.Latest} 받음 · 재시작하면 적용", Label(13, C_acc, FontStyle.Normal, TextAnchor.MiddleRight));
-            var r = new Rect(Screen.width - 270, Screen.height - 104, 250, 80);
-            if (GUI.Button(r, "", S_cardBtn)) Island.Enter();
-            Orbit(new Vector2(r.x + 42, r.y + r.height / 2), 16, 8, 1.2f);
-            GUI.Label(new Rect(r.x + 74, r.y + 14, 170, 28), "멀티 섬으로", Label(19, C_txt, FontStyle.Bold));
-            GUI.Label(new Rect(r.x + 74, r.y + 42, 170, 22), "친구와 같은 맵으로 대결 · Ctrl + M", S_small);
+                GUI.Label(new Rect(Screen.width - 420, Screen.height - 40, 400, 22), $"멀티 v{Updater.Latest} 받음 · 재시작하면 적용", Label(13, C_acc, FontStyle.Normal, TextAnchor.MiddleRight));
+
+            // 메인 섬의 멀티 포탈 위에 표지판
+            if (PortalTile.ScreenPos(out var p))
+            {
+                float bob = Mathf.Sin(Time.unscaledTime * 2.2f) * 4f;
+                var r = new Rect(p.x - 70, p.y - 92 + bob, 140, 46);
+                GUI.Box(r, "", S_card);
+                Orbit(new Vector2(r.x + 22, r.y + r.height / 2f), 7, 4, 1.4f);
+                GUI.Label(new Rect(r.x + 36, r.y + 4, r.width - 40, 22), "멀티", Label(16, C_txt, FontStyle.Bold));
+                GUI.Label(new Rect(r.x + 36, r.y + 23, r.width - 40, 18), "포탈로 이동", Label(11, C_sub));
+                Fill(new Rect(p.x - 1, r.yMax, 2, 18 - bob), A(C_acc, 0.6f));
+                return;
+            }
+
+            // 포탈을 놓을 자리를 못 찾았을 때만 대체 버튼
+            if (PortalTile.Failed && Game.IsMainMenu)
+            {
+                var r = new Rect(Screen.width - 270, Screen.height - 104, 250, 80);
+                if (GUI.Button(r, "", S_cardBtn)) Island.Enter();
+                Orbit(new Vector2(r.x + 42, r.y + r.height / 2), 16, 8, 1.2f);
+                GUI.Label(new Rect(r.x + 74, r.y + 14, 170, 28), "멀티 섬으로", Label(19, C_txt, FontStyle.Bold));
+                GUI.Label(new Rect(r.x + 74, r.y + 42, 170, 22), "친구와 같은 맵으로 대결", S_small);
+            }
         }
 
         static void DrawCover()
@@ -840,7 +858,7 @@ namespace ADOFAIMulti
             GUILayout.EndHorizontal();
 
             Section("단축키");
-            GUILayout.Label("Ctrl + M  멀티 섬   ·   F5  준비   ·   Ctrl + Shift + Q  기권   ·   Esc  뒤로", S_para);
+            GUILayout.Label("메인 섬의 멀티 포탈로 입장   ·   F5  준비   ·   Ctrl + Shift + Q  기권   ·   Esc  뒤로", S_para);
             GUILayout.EndArea();
         }
 

@@ -105,7 +105,7 @@ namespace ADOFAIMultiInstaller
                 Warn("Together 모드가 깔려 있습니다. 충돌이 나면 UMM(Ctrl+F10)에서 Together를 꺼주세요.");
 
             Console.WriteLine();
-            Console.WriteLine("사용법: 게임 실행 → Ctrl + M 으로 멀티 창 열기");
+            Console.WriteLine("사용법: 게임 실행 → 메인 섬의 \"멀티\" 포탈로 이동");
         }
 
         static void Uninstall(string modDir)

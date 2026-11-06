@@ -7,7 +7,7 @@ namespace ADOFAIMulti
 {
     public static class Main
     {
-        public const string Version = "0.7.1";
+        public const string Version = "0.8.0";
         public static UnityModManager.ModEntry Mod;
         public static Harmony Harmony;
         public static bool Enabled;
@@ -22,7 +22,7 @@ namespace ADOFAIMulti
             Mod.OnToggle = OnToggle;
             Mod.OnGUI = _ =>
             {
-                GUILayout.Label("메인 메뉴 오른쪽 아래 [멀티 섬으로] 또는 Ctrl + M 으로 멀티 섬에 들어갑니다. (v" + Version + ")");
+                GUILayout.Label("메인 섬에 생기는 \"멀티\" 포탈로 이동하면 멀티 섬에 들어갑니다. (v" + Version + ")");
                 GUILayout.Label("업데이트: " + System.Text.RegularExpressions.Regex.Replace(Updater.StatusText, "<[^>]+>", ""));
             };
             return true;
@@ -72,12 +72,8 @@ namespace ADOFAIMulti
                 Theme.SaveIfDirty();
                 Updater.Tick(this);
                 Session.Update();
-                // 멀티 로비는 메뉴 화면에서만 열 수 있음 (레벨 안에서는 안 열림)
-                if (Input.GetKeyDown(KeyCode.M) && (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && !Game.IsScnGame)
-                {
-                    if (!Island.InIsland) Island.Enter();
-                    else if (!Session.InRoom) Island.Leave();
-                }
+                // 멀티 섬 입장은 메인 섬의 멀티 포탈로만
+                PortalTile.Tick();
             }
             catch (Exception ex) { Main.Log("Update error: " + ex); }
         }
