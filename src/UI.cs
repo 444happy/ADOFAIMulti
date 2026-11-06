@@ -361,7 +361,8 @@ namespace ADOFAIMulti
             GUI.DrawTexture(new Rect(28, 74, W - 56, 1), T_line);
 
             // 아래 상태 줄
-            string st = Esc(string.Join("   ·   ", new[] { Net.Status, Session.Notice }.Where(s => !string.IsNullOrEmpty(s)).ToArray()));
+            string upd = Updater.Current == Updater.State.ReadyToRestart ? $"멀티 v{Updater.Latest} 받음 · 재시작하면 적용" : Updater.Current == Updater.State.Downloading ? $"v{Updater.Latest} 받는 중" : "";
+            string st = Esc(string.Join("   ·   ", new[] { Net.Status, Session.Notice, upd }.Where(s => !string.IsNullOrEmpty(s)).ToArray()));
             GUI.Label(new Rect(28, Screen.height - 26, W - 300, 22), st, S_small);
             GUI.Label(new Rect(W - 300, Screen.height - 26, 272, 22), "v" + Main.Version + "   ·   Esc 뒤로", Label(12, A(C_sub, 0.7f), FontStyle.Normal, TextAnchor.MiddleRight));
         }
@@ -820,7 +821,13 @@ namespace ADOFAIMulti
             if (custom) CustomEditor();
 
             Section("업데이트");
-            GUILayout.Label($"현재 v{Main.Version}   ·   {Updater.StatusText}", S_para);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label($"현재 v{Main.Version}   ·   {Updater.StatusText}", S_sub);
+            GUILayout.FlexibleSpace();
+            GUI.enabled = Updater.Current != Updater.State.Checking && Updater.Current != Updater.State.Downloading && Updater.Current != Updater.State.ReadyToRestart;
+            if (GUILayout.Button("지금 확인", S_iconBtn, GUILayout.Width(110)) && Runner.Instance != null) Updater.CheckNow(Runner.Instance);
+            GUI.enabled = true;
+            GUILayout.EndHorizontal();
             if (Updater.Current == Updater.State.Failed) GUILayout.Label(Esc(Updater.Error), S_para);
 
             Section("받은 맵 캐시");

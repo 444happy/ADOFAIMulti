@@ -7,7 +7,7 @@ namespace ADOFAIMulti
 {
     public static class Main
     {
-        public const string Version = "0.7.0";
+        public const string Version = "0.7.1";
         public static UnityModManager.ModEntry Mod;
         public static Harmony Harmony;
         public static bool Enabled;
@@ -60,6 +60,9 @@ namespace ADOFAIMulti
     /// <summary>매 프레임 네트워크/세션을 돌리고 화면을 그리는 컴포넌트</summary>
     public class Runner : MonoBehaviour
     {
+        public static Runner Instance;
+        void Awake() { Instance = this; }
+
         void Update()
         {
             try
@@ -67,6 +70,7 @@ namespace ADOFAIMulti
                 MainThread.Drain();
                 Net.Poll();
                 Theme.SaveIfDirty();
+                Updater.Tick(this);
                 Session.Update();
                 // 멀티 로비는 메뉴 화면에서만 열 수 있음 (레벨 안에서는 안 열림)
                 if (Input.GetKeyDown(KeyCode.M) && (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && !Game.IsScnGame)

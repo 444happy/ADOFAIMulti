@@ -1,7 +1,7 @@
 {
-  "Version": "0.7.0",
+  "Version": "0.7.1",
   "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
   "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
-  "Sha256": "f93fa230a031c4a65c699c2f5c2b89d82d2c1658c8045b6166806f25743b21d3",
-  "Notes": "테마: 모노/불과 얼음 + 커스텀 5색 편집"
+  "Sha256": "f41aefd205dbb23dbe9ec0d6e194e5d01f41db28cbc3a708e9804a64f3eefba0",
+  "Notes": "업데이트 주기 확인, 지금 확인 버튼"
 }
