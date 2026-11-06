@@ -15,22 +15,23 @@ namespace ADOFAIMulti
         static string _joinId = "", _mapPath = "", _search = "";
         static Vector2 _sPeers, _sMaps, _sRes;
 
-        // ---- palette ----
-        static readonly Color C_bg = Hex("0b1410"), C_side = Hex("101b16"), C_card = Hex("1d2a25"), C_cardHi = Hex("27372f"),
-            C_line = Hex("2b3b34"), C_acc = Hex("74e0b0"), C_txt = Hex("e6efe9"), C_sub = Hex("8fa39a"),
-            C_fire = Hex("ff6a4d"), C_ice = Hex("5ab8ff"), C_gold = Hex("ffd36b");
+        // ---- palette (현재 테마에서 복사) ----
+        static Color C_bg, C_side, C_card, C_cardHi, C_line, C_acc, C_acc2, C_txt, C_sub, C_fire, C_ice, C_gold;
+        static Theme _built;
 
-        static Texture2D T_bg, T_side, T_card, T_cardHi, T_acc, T_line, T_fire, T_ice, T_white, T_circle, T_dim, T_chip;
-        static GUIStyle S_para, S_paraTxt, S_h1, S_h2, S_txt, S_sub, S_small, S_num, S_card, S_cardBtn, S_btn, S_btnAcc, S_side, S_sideOn, S_field, S_chip, S_big, S_row, S_rowOn, S_logo;
+        static Texture2D T_bg, T_side, T_card, T_cardHi, T_acc, T_line, T_fire, T_ice, T_white, T_circle, T_dim, T_chip, T_glow, T_grad, T_accBar, T_sideHi;
+        static GUIStyle S_para, S_paraTxt, S_h1, S_h2, S_txt, S_sub, S_small, S_num, S_card, S_cardBtn, S_btn, S_btnAcc, S_side, S_sideOn, S_field, S_chip, S_big, S_row, S_rowOn, S_logo, S_section;
         static Font _font;
 
         static Color Hex(string h) { ColorUtility.TryParseHtmlString("#" + h, out var c); return c; }
         static string HexOf(Color c) => ColorUtility.ToHtmlStringRGB(c);
+        static Color A(Color c, float a) => new Color(c.r, c.g, c.b, a);
 
-        // 둥근 모서리 텍스처 (9-slice)
-        static Texture2D Round(Color c, int r = 8)
+        /// <summary>둥근 모서리 + (선택) 1px 테두리 + (선택) 가로 그라데이션 텍스처 (9-slice)</summary>
+        static Texture2D Round(Color c, int r = 10, Color? border = null, Color? c2 = null)
         {
             int n = r * 2 + 2;
+            if (c2.HasValue) n = Mathf.Max(n, 64);
             var t = new Texture2D(n, n, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
             for (int y = 0; y < n; y++)
                 for (int x = 0; x < n; x++)
@@ -39,12 +40,46 @@ namespace ADOFAIMulti
                     float dy = Mathf.Max(0, Mathf.Max(r - y - 0.5f, y + 0.5f - (n - r)));
                     float d = Mathf.Sqrt(dx * dx + dy * dy);
                     float a = Mathf.Clamp01(r - d + 0.5f);
-                    t.SetPixel(x, y, new Color(c.r, c.g, c.b, c.a * a));
+                    var fill = c2.HasValue ? Color.Lerp(c, c2.Value, x / (float)(n - 1)) : c;
+                    if (border.HasValue)
+                    {
+                        // 가장자리 1px 테두리
+                        float edge = Mathf.Min(Mathf.Min(x, n - 1 - x), Mathf.Min(y, n - 1 - y));
+                        bool inCorner = dx > 0 && dy > 0;
+                        bool isBorder = inCorner ? d > r - 1.5f : edge < 1f;
+                        if (isBorder) fill = Color.Lerp(fill, border.Value, border.Value.a);
+                    }
+                    t.SetPixel(x, y, new Color(fill.r, fill.g, fill.b, fill.a * a));
                 }
-            t.Apply(); Object.DontDestroyOnLoad(t); t.hideFlags = HideFlags.HideAndDontSave;
+            t.Apply(); t.hideFlags = HideFlags.HideAndDontSave;
             return t;
         }
         static Texture2D Solid(Color c) { var t = new Texture2D(1, 1); t.SetPixel(0, 0, c); t.Apply(); t.hideFlags = HideFlags.HideAndDontSave; return t; }
+
+        // 세로 그라데이션 배경 / 원형 은은한 빛
+        static Texture2D VGrad(Color top, Color bottom)
+        {
+            var t = new Texture2D(1, 64, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+            for (int y = 0; y < 64; y++) t.SetPixel(0, y, Color.Lerp(bottom, top, y / 63f));
+            t.Apply(); t.hideFlags = HideFlags.HideAndDontSave; return t;
+        }
+        static Texture2D Glow(Color c)
+        {
+            int n = 128; var t = new Texture2D(n, n, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+            for (int y = 0; y < n; y++) for (int x = 0; x < n; x++)
+                {
+                    float d = Vector2.Distance(new Vector2(x, y), new Vector2(n / 2f, n / 2f)) / (n / 2f);
+                    float a = Mathf.Clamp01(1 - d); a = a * a * 0.55f;
+                    t.SetPixel(x, y, new Color(c.r, c.g, c.b, a));
+                }
+            t.Apply(); t.hideFlags = HideFlags.HideAndDontSave; return t;
+        }
+        static Texture2D HGrad(Color a, Color b)
+        {
+            var t = new Texture2D(64, 1, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+            for (int x = 0; x < 64; x++) t.SetPixel(x, 0, Color.Lerp(a, b, x / 63f));
+            t.Apply(); t.hideFlags = HideFlags.HideAndDontSave; return t;
+        }
 
         static GUIStyle Box(Texture2D bg, int border, RectOffset pad)
         {
@@ -58,7 +93,7 @@ namespace ADOFAIMulti
         /// <summary>라벨 스타일 (같은 조합은 캐시해서 매 프레임 새로 만들지 않음)</summary>
         static GUIStyle Label(int size, Color col, FontStyle fs = FontStyle.Normal, TextAnchor a = TextAnchor.MiddleLeft, bool wrap = false)
         {
-            string key = size + "|" + HexOf(col) + "|" + (int)fs + "|" + (int)a + "|" + wrap;
+            string key = size + "|" + ColorUtility.ToHtmlStringRGBA(col) + "|" + (int)fs + "|" + (int)a + "|" + wrap;
             if (_labelCache.TryGetValue(key, out var cached)) return cached;
             var s = new GUIStyle(GUI.skin.label) { font = _font, fontSize = size, fontStyle = fs, alignment = a, richText = true, wordWrap = wrap, clipping = TextClipping.Clip };
             s.normal.textColor = col;
@@ -66,51 +101,72 @@ namespace ADOFAIMulti
             return s;
         }
 
-        static GUIStyle Button(Texture2D n, Texture2D h, Color text, int size, int height)
+        static GUIStyle Button(Texture2D n, Texture2D h, Color text, int size, int height, Color? hoverText = null)
         {
-            var s = new GUIStyle { font = _font, fontSize = size, alignment = TextAnchor.MiddleCenter, richText = true, border = new RectOffset(8, 8, 8, 8), padding = new RectOffset(14, 14, 6, 6), margin = new RectOffset(4, 4, 4, 4), fixedHeight = height };
+            var s = new GUIStyle { font = _font, fontSize = size, alignment = TextAnchor.MiddleCenter, richText = true, border = new RectOffset(10, 10, 10, 10), padding = new RectOffset(16, 16, 6, 6), margin = new RectOffset(4, 4, 4, 4), fixedHeight = height };
             s.normal.background = n; s.hover.background = h; s.active.background = h; s.focused.background = n;
-            s.normal.textColor = s.hover.textColor = s.active.textColor = s.focused.textColor = text;
+            s.normal.textColor = s.focused.textColor = text;
+            s.hover.textColor = s.active.textColor = hoverText ?? text;
             return s;
         }
 
         static void Styles()
         {
-            if (S_h1 != null) return;
+            if (S_h1 != null && _built == Theme.Current) return;
+            var th = Theme.Current; _built = th;
+            _labelCache.Clear();
+            C_bg = th.Bg; C_side = th.Side; C_card = th.Card; C_cardHi = th.CardHi; C_line = th.Line; C_acc = th.Acc; C_acc2 = th.Acc2;
+            C_txt = th.Txt; C_sub = th.Sub; C_fire = th.Fire; C_ice = th.Ice; C_gold = th.Gold;
+
             // 주의: Font.CreateDynamicFontFromOSFont 로 OS 글꼴을 만들면 Unity 6 에서
             // 같은 OS 글꼴을 쓰는 다른 모드(StutterFix 등)와 텍스트 캐시가 섞여 글자가 바뀌어 나옴.
             // → 게임 기본 IMGUI 글꼴(GUI.skin.font)을 그대로 쓴다.
             _font = null;
 
-            T_bg = Solid(C_bg); T_side = Solid(C_side); T_line = Solid(C_line); T_white = Solid(Color.white);
-            T_dim = Solid(new Color(0, 0, 0, 0.6f));
-            T_card = Round(C_card); T_cardHi = Round(C_cardHi); T_acc = Round(C_acc);
-            T_fire = Round(C_fire, 4); T_ice = Round(C_ice, 4); T_chip = Round(Hex("22302a"), 5);
+            var border = A(Color.white, 0.06f);
+            T_bg = VGrad(th.BgTop, th.Bg); T_glow = Glow(th.Glow);
+            T_side = Solid(A(th.Side, 0.96f)); T_line = Solid(C_line); T_white = Solid(Color.white);
+            T_dim = Solid(new Color(0, 0, 0, 0.62f));
+            T_card = Round(A(C_card, 0.94f), 12, border); T_cardHi = Round(C_cardHi, 12, A(C_acc, 0.25f));
+            T_acc = Round(C_acc, 12, null, C_acc2); T_grad = HGrad(C_fire, C_ice); T_accBar = HGrad(C_acc, C_acc2);
+            T_fire = Round(C_fire, 4); T_ice = Round(C_ice, 4); T_chip = Round(th.CardHi, 6, border);
             T_circle = Round(Color.white, 32);
+            T_sideHi = Round(A(C_acc, 0.14f), 10);
 
-            S_h1 = Label(30, C_txt);
-            S_h2 = Label(19, C_txt, FontStyle.Bold);
+            S_h1 = Label(30, C_txt, FontStyle.Bold);
+            S_h2 = Label(18, C_txt, FontStyle.Bold);
             S_txt = Label(16, C_txt);
             S_sub = Label(14, C_sub);
             S_para = Label(14, C_sub, FontStyle.Normal, TextAnchor.UpperLeft, true);
             S_paraTxt = Label(16, C_txt, FontStyle.Normal, TextAnchor.UpperLeft, true);
             S_small = Label(13, C_sub);
-            S_num = Label(30, C_acc);
-            S_big = Label(72, Color.white, FontStyle.Bold, TextAnchor.MiddleCenter);
-            S_logo = Label(20, C_txt, FontStyle.Normal);
-            S_card = Box(T_card, 8, new RectOffset(16, 16, 14, 14));
-            S_cardBtn = Button(T_card, T_cardHi, C_txt, 16, 0); S_cardBtn.alignment = TextAnchor.UpperLeft; S_cardBtn.padding = new RectOffset(16, 16, 14, 14); S_cardBtn.margin = new RectOffset(6, 6, 6, 6);
-            S_btn = Button(Round(Hex("2c3d36")), Round(Hex("374b43")), C_txt, 16, 40);
-            S_btnAcc = Button(T_acc, Round(Hex("8cf0c4")), Hex("0b1410"), 17, 46); S_btnAcc.fontStyle = FontStyle.Bold;
-            S_side = Button(null, Round(Hex("1c2a24")), C_sub, 13, 42); S_side.font = _font; S_side.padding = new RectOffset(0, 0, 0, 0); S_side.fixedWidth = 42;
-            S_sideOn = Button(Round(Hex("22342c")), Round(Hex("22342c")), C_acc, 13, 42); S_sideOn.font = _font; S_sideOn.fontStyle = FontStyle.Bold; S_sideOn.padding = new RectOffset(0, 0, 0, 0); S_sideOn.fixedWidth = 42;
-            S_field = new GUIStyle(GUI.skin.textField) { font = _font, fontSize = 16, fixedHeight = 38, padding = new RectOffset(12, 12, 9, 9), border = new RectOffset(8, 8, 8, 8) };
-            S_field.normal.background = Round(Hex("16211c")); S_field.focused.background = Round(Hex("1a2a23")); S_field.hover.background = S_field.normal.background;
+            S_section = Label(12, A(C_sub, 0.9f), FontStyle.Bold);
+            S_num = Label(32, C_acc, FontStyle.Bold);
+            S_big = Label(80, Color.white, FontStyle.Bold, TextAnchor.MiddleCenter);
+            S_logo = Label(17, C_txt, FontStyle.Bold);
+            S_card = Box(T_card, 12, new RectOffset(18, 18, 16, 16));
+            S_cardBtn = Button(T_card, T_cardHi, C_txt, 16, 0); S_cardBtn.alignment = TextAnchor.UpperLeft; S_cardBtn.padding = new RectOffset(18, 18, 16, 16); S_cardBtn.margin = new RectOffset(6, 6, 6, 6);
+            S_btn = Button(Round(C_cardHi, 10, border), Round(Color.Lerp(C_cardHi, C_acc, 0.18f), 10, A(C_acc, 0.4f)), C_txt, 15, 40);
+            S_btnAcc = Button(T_acc, Round(Color.Lerp(C_acc, Color.white, 0.18f), 12, null, Color.Lerp(C_acc2, Color.white, 0.18f)), th.AccText, 16, 46); S_btnAcc.fontStyle = FontStyle.Bold;
+            S_side = Button(null, Round(A(C_acc, 0.07f), 10), C_sub, 12, 46, C_txt); S_side.padding = new RectOffset(0, 0, 0, 0); S_side.fixedWidth = 46;
+            S_sideOn = Button(T_sideHi, T_sideHi, C_acc, 12, 46); S_sideOn.fontStyle = FontStyle.Bold; S_sideOn.padding = new RectOffset(0, 0, 0, 0); S_sideOn.fixedWidth = 46;
+            S_field = new GUIStyle(GUI.skin.textField) { font = _font, fontSize = 15, fixedHeight = 40, padding = new RectOffset(14, 14, 10, 10), border = new RectOffset(10, 10, 10, 10), margin = new RectOffset(4, 4, 4, 4) };
+            S_field.normal.background = Round(th.Field, 10, border); S_field.focused.background = Round(th.Field, 10, A(C_acc, 0.6f)); S_field.hover.background = Round(th.Field, 10, A(Color.white, 0.12f));
             S_field.normal.textColor = S_field.focused.textColor = S_field.hover.textColor = C_txt;
-            S_chip = Box(T_chip, 5, new RectOffset(8, 8, 3, 3)); S_chip.font = _font; S_chip.fontSize = 13; S_chip.normal.textColor = C_txt; S_chip.alignment = TextAnchor.MiddleCenter; S_chip.margin = new RectOffset(4, 4, 0, 0);
-            S_row = Button(null, T_cardHi, C_txt, 15, 34); S_row.alignment = TextAnchor.MiddleLeft;
-            S_rowOn = Button(Round(Hex("22342c")), Round(Hex("22342c")), C_acc, 15, 34); S_rowOn.alignment = TextAnchor.MiddleLeft;
+            S_chip = Box(T_chip, 6, new RectOffset(8, 8, 3, 3)); S_chip.font = _font; S_chip.fontSize = 12; S_chip.fontStyle = FontStyle.Bold; S_chip.normal.textColor = C_txt; S_chip.alignment = TextAnchor.MiddleCenter; S_chip.margin = new RectOffset(4, 4, 2, 0);
+            S_row = Button(null, Round(A(C_acc, 0.06f), 8), C_txt, 15, 36); S_row.alignment = TextAnchor.MiddleLeft; S_row.border = new RectOffset(8, 8, 8, 8);
+            S_rowOn = Button(Round(A(C_acc, 0.16f), 8, A(C_acc, 0.5f)), Round(A(C_acc, 0.16f), 8, A(C_acc, 0.5f)), C_acc, 15, 36); S_rowOn.alignment = TextAnchor.MiddleLeft; S_rowOn.border = new RectOffset(8, 8, 8, 8);
         }
+
+        static readonly System.Collections.Generic.Dictionary<Color, Texture2D> _swatches = new System.Collections.Generic.Dictionary<Color, Texture2D>();
+        static Texture2D Swatch(Color c)
+        {
+            if (!_swatches.TryGetValue(c, out var t)) _swatches[c] = t = Round(c, 6, A(Color.white, 0.15f));
+            return t;
+        }
+
+        /// <summary>작은 대문자 섹션 머리말</summary>
+        static void Section(string t) { GUILayout.Space(4); GUILayout.Label(t, S_section); }
 
         // =====================================================================
         public static void Draw()
@@ -172,18 +228,33 @@ namespace ADOFAIMulti
             if (e.type == EventType.KeyDown && e.keyCode == KeyCode.F5 && Session.Phase == Phase.WaitingStart) { Session.ToggleReady(); e.Use(); }
 
             float W = Screen.width, H = Screen.height;
+            // 배경: 세로 그라데이션 + 은은한 빛 두 개 + 섬 그림
             GUI.DrawTexture(new Rect(0, 0, W, H), T_bg);
+            float pulse = 0.85f + Mathf.Sin(Time.unscaledTime * 0.6f) * 0.15f;
+            var oc = GUI.color;
+            GUI.color = A(Color.white, pulse);
+            GUI.DrawTexture(new Rect(W * 0.55f, -H * 0.35f, W * 0.8f, W * 0.8f), T_glow);
+            GUI.color = A(Color.white, 0.5f * pulse);
+            GUI.DrawTexture(new Rect(-W * 0.2f, H * 0.45f, W * 0.6f, W * 0.6f), T_glow);
+            GUI.color = oc;
             DrawIslandArt(new Rect(0, 0, W, H));
 
-            // top bar
-            GUI.DrawTexture(new Rect(0, 0, W, 48), T_side);
-            Orbit(new Vector2(24, 24), 9, 6, 0.9f);
-            GUI.Label(new Rect(48, 8, 400, 32), "A D O F A I   M U L T I", S_logo);
-            if (GUI.Button(new Rect(W - 50, 6, 40, 36), "×", Label(24, C_txt, FontStyle.Normal, TextAnchor.MiddleCenter))) AskLeave();
+            // 상단 바 + 불→얼음 그라데이션 선
+            GUI.DrawTexture(new Rect(0, 0, W, 52), T_side);
+            GUI.DrawTexture(new Rect(0, 51, W, 2), T_grad);
+            Orbit(new Vector2(32, 26), 10, 6, 0.9f);
+            GUI.Label(new Rect(58, 10, 300, 32), "ADOFAI <color=#" + HexOf(C_acc) + ">MULTI</color>", S_logo);
+            if (Session.InRoom)
+            {
+                string badge = (Net.IsHost ? "방장" : "멤버") + "  ·  " + Session.Board.Count + "/8  ·  " + PhaseText();
+                GUI.Label(new Rect(200, 14, 400, 24), badge, S_small);
+            }
+            if (GUI.Button(new Rect(W - 54, 8, 44, 36), "×", Label(26, C_sub, FontStyle.Normal, TextAnchor.MiddleCenter))) AskLeave();
 
-            // sidebar
-            GUI.DrawTexture(new Rect(0, 48, 56, H - 48), T_side);
-            GUILayout.BeginArea(new Rect(7, 56, 42, H - 64));
+            // 사이드바 (활성 탭 왼쪽에 강조 막대)
+            GUI.DrawTexture(new Rect(0, 53, 64, H - 53), T_side);
+            GUI.DrawTexture(new Rect(63, 53, 1, H - 53), T_line);
+            GUILayout.BeginArea(new Rect(9, 64, 46, H - 72));
             SideBtn(Tab.Home, "홈");
             SideBtn(Tab.Room, "방");
             SideBtn(Tab.Map, "맵");
@@ -191,25 +262,26 @@ namespace ADOFAIMulti
             SideBtn(Tab.Settings, "설정");
             GUILayout.FlexibleSpace();
             if (GUILayout.Button("나가기", S_side)) AskLeave();
-            GUILayout.Space(30);
+            GUILayout.Space(36);
             GUILayout.EndArea();
 
-            // footer
-            GUI.DrawTexture(new Rect(56, H - 34, W - 56, 34), T_side);
-            GUILayout.BeginArea(new Rect(70, H - 30, W - 80, 26));
+            // 하단 바
+            GUI.DrawTexture(new Rect(64, H - 36, W - 64, 36), T_side);
+            GUI.DrawTexture(new Rect(64, H - 36, W - 64, 1), T_line);
+            GUILayout.BeginArea(new Rect(80, H - 31, W - 92, 28));
             GUILayout.BeginHorizontal();
             GUILayout.Label("ADOFAI Multi " + Main.Version, S_small, GUILayout.ExpandWidth(false));
             GUILayout.Space(16);
             string st = Esc(string.Join("  ·  ", new[] { Net.Status, Session.Notice }.Where(x => !string.IsNullOrEmpty(x)).ToArray()));
             GUILayout.Label(st, S_small);
             GUILayout.FlexibleSpace();
-            if (Session.Phase == Phase.WaitingStart) { GUILayout.Label("F5", S_chip, GUILayout.ExpandWidth(false)); GUILayout.Label("준비", S_small, GUILayout.ExpandWidth(false)); GUILayout.Space(10); }
+            if (Session.Phase == Phase.WaitingStart) { GUILayout.Label("F5", S_chip, GUILayout.ExpandWidth(false)); GUILayout.Label("준비", S_small, GUILayout.ExpandWidth(false)); GUILayout.Space(12); }
             GUILayout.Label("Esc", S_chip, GUILayout.ExpandWidth(false)); GUILayout.Label("섬 떠나기", S_small, GUILayout.ExpandWidth(false));
             GUILayout.EndHorizontal();
             GUILayout.EndArea();
 
             // content
-            GUILayout.BeginArea(new Rect(72, 60, W - 88, H - 104));
+            GUILayout.BeginArea(new Rect(80, 68, W - 96, H - 112));
             switch (Page)
             {
                 case Tab.Home: PageHome(); break;
@@ -231,8 +303,14 @@ namespace ADOFAIMulti
 
         static void SideBtn(Tab t, string icon)
         {
-            if (GUILayout.Button(icon, Page == t ? S_sideOn : S_side)) Page = t;
-            GUILayout.Space(4);
+            bool on = Page == t;
+            if (GUILayout.Button(icon, on ? S_sideOn : S_side)) Page = t;
+            if (on && Event.current.type == EventType.Repaint)
+            {
+                var r = GUILayoutUtility.GetLastRect();
+                GUI.DrawTexture(new Rect(r.x - 9, r.y + 10, 3, r.height - 20), T_accBar);
+            }
+            GUILayout.Space(6);
         }
 
         // 배경: 섬 위 타일 길 + 공전하는 행성 (얼불춤 느낌)
@@ -268,19 +346,24 @@ namespace ADOFAIMulti
         // ---------------- 공통 위젯 ----------------
         static void Title(string t, string sub)
         {
-            GUILayout.Label(t, S_h1);
-            if (!string.IsNullOrEmpty(sub)) GUILayout.Label(sub, S_para);
-            GUILayout.Space(8);
+            GUILayout.Label(t, S_h1, GUILayout.Height(40));
+            if (Event.current.type == EventType.Repaint)
+            {
+                var r = GUILayoutUtility.GetLastRect();
+                GUI.DrawTexture(new Rect(r.x + 2, r.yMax - 2, 36, 3), T_accBar);
+            }
+            if (!string.IsNullOrEmpty(sub)) { GUILayout.Space(4); GUILayout.Label(sub, S_para); }
+            GUILayout.Space(10);
         }
 
         /// <summary>콘텐츠 영역 폭을 n등분한 카드 폭 (카드 margin 12 고려)</summary>
-        static float Col(int n) => Mathf.Floor((Screen.width - 88f) / n) - 12f;
+        static float Col(int n) => Mathf.Floor((Screen.width - 96f) / n) - 12f;
 
         static void StatCard(string num, string label, float width)
         {
             GUILayout.BeginVertical(S_card, GUILayout.Width(width), GUILayout.Height(84));
+            GUILayout.Label(label, S_section);
             GUILayout.Label(num, S_num);
-            GUILayout.Label(label, S_small);
             GUILayout.EndVertical();
         }
 
@@ -288,7 +371,7 @@ namespace ADOFAIMulti
         {
             var r = GUILayoutUtility.GetRect(100, h, GUILayout.ExpandWidth(true));
             GUI.DrawTexture(r, T_line);
-            GUI.DrawTexture(new Rect(r.x, r.y, r.width * Mathf.Clamp01(p), r.height), T_acc);
+            GUI.DrawTexture(new Rect(r.x, r.y, r.width * Mathf.Clamp01(p), r.height), T_accBar);
         }
 
         // ---------------- 홈 ----------------
@@ -487,6 +570,32 @@ namespace ADOFAIMulti
         static void PageSettings()
         {
             Title("설정", null);
+
+            // ---- 테마 ----
+            GUILayout.BeginVertical(S_card);
+            GUILayout.Label("테마", S_h2);
+            GUILayout.Space(6);
+            GUILayout.BeginHorizontal();
+            foreach (var th in Theme.All)
+            {
+                bool on = th == Theme.Current;
+                var r = GUILayoutUtility.GetRect(150, 74, GUILayout.Width(150), GUILayout.Height(74));
+                if (GUI.Button(r, "", on ? S_rowOn : S_row)) Theme.Set(th);
+                if (Event.current.type == EventType.Repaint)
+                {
+                    // 미리보기: 배경/카드/강조색 스와치
+                    GUI.DrawTexture(new Rect(r.x + 12, r.y + 12, 26, 26), Swatch(th.Bg));
+                    GUI.DrawTexture(new Rect(r.x + 42, r.y + 12, 26, 26), Swatch(th.Card));
+                    GUI.DrawTexture(new Rect(r.x + 72, r.y + 12, 26, 26), Swatch(th.Acc));
+                    GUI.DrawTexture(new Rect(r.x + 102, r.y + 12, 26, 26), Swatch(th.Acc2));
+                }
+                GUI.Label(new Rect(r.x + 12, r.y + 44, r.width - 20, 22), th.Name, Label(13, on ? C_acc : C_txt, on ? FontStyle.Bold : FontStyle.Normal));
+                GUILayout.Space(8);
+            }
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+            GUILayout.EndVertical();
+
             GUILayout.BeginVertical(S_card);
             GUILayout.Label("업데이트", S_h2);
             GUILayout.Label($"현재 v{Main.Version}   ·   {Updater.StatusText}", S_para);

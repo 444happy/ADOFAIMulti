@@ -1,7 +1,7 @@
 {
-  "Version": "0.4.2",
+  "Version": "0.5.0",
   "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
   "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
-  "Sha256": "8383d0222985c65e0338b00fa5dd1268cd5218c175343c9b8e244465dc420517",
-  "Notes": "다른 모드와 글꼴 충돌로 글자가 바뀌어 보이던 문제 수정"
+  "Sha256": "ddab28888e95024ebff2d09d364af04192a27a70918c00c9e78a0e74f1df275e",
+  "Notes": "테마 개편 + 테마 프리셋 4종"
 }
