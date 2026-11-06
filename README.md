@@ -10,6 +10,16 @@ A Dance of Fire and Ice 친구끼리 멀티 모드 (UnityModManager)
 - 방장이 TUF(The Universal Forums)에서 맵을 검색해 고르면 모두가 TUF CDN에서 직접 다운로드
 - 게임 실행 시 자동 업데이트 (재시작하면 적용)
 
+## 설치 (가장 쉬운 방법)
+
+게임을 끈 상태에서 **PowerShell**(시작 → "PowerShell" 검색)을 열고 아래 한 줄을 붙여넣으세요.
+
+```powershell
+irm https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/install.ps1 | iex
+```
+
+파일을 내려받지 않아서 브라우저/백신 경고가 뜨지 않아요. UnityModManager(UMM)는 먼저 설치되어 있어야 해요.
+
 ## 설치
 1. [UnityModManager](https://www.nexusmods.com/site/mods/21) 설치
 2. 다운로드
