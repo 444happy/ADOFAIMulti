@@ -23,10 +23,10 @@ namespace ADOFAIMulti
         static MonoBehaviour _runner;
         static GameObject _camGo;
 
-        // 꺼둔 메뉴 오브젝트 / 멈춘 소리 (나갈 때 되돌림)
-        static readonly List<GameObject> _hidden = new List<GameObject>();
-        struct AudioState { public AudioSource src; public float time; }
-        static readonly List<AudioState> _audio = new List<AudioState>();
+        // 섬에 있는 동안 꺼둔 메뉴 카메라·화면 UI (나갈 때 되돌림)
+        static readonly List<Camera> _cams = new List<Camera>();
+        static readonly List<Canvas> _canvases = new List<Canvas>();
+        static float _savedVolume = 1f;
 
         public static void Init(MonoBehaviour runner) { _runner = runner; }
 
@@ -47,22 +47,25 @@ namespace ADOFAIMulti
             Busy = false;
         }
 
+        /// <summary>
+        /// 메뉴는 끄지 않고(껐다 켜면 행성 링·꼬리 등이 다시 초기화되며 잔상이 남음) 뒤에서 그대로 돌게 두고,
+        /// 카메라와 화면 UI만 끄고 소리는 음소거, 입력은 Harmony 패치(Game.MenuFrozen)로 막는다.
+        /// </summary>
         static void HideGame()
         {
-            _hidden.Clear(); _audio.Clear();
+            _cams.Clear(); _canvases.Clear();
             for (int i = 0; i < SceneManager.sceneCount; i++)
             {
                 var s = SceneManager.GetSceneAt(i);
                 if (!s.isLoaded) continue;
                 foreach (var root in s.GetRootGameObjects())
                 {
-                    if (!root.activeSelf) continue;
-                    foreach (var a in root.GetComponentsInChildren<AudioSource>())
-                        if (a.isPlaying) _audio.Add(new AudioState { src = a, time = a.time });
-                    root.SetActive(false);
-                    _hidden.Add(root);
+                    foreach (var c in root.GetComponentsInChildren<Camera>()) if (c.enabled) { c.enabled = false; _cams.Add(c); }
+                    foreach (var cv in root.GetComponentsInChildren<Canvas>()) if (cv.enabled && cv.isRootCanvas) { cv.enabled = false; _canvases.Add(cv); }
                 }
             }
+            _savedVolume = AudioListener.volume;
+            AudioListener.volume = 0f;
 
             // 섬 전용 카메라 (DontDestroyOnLoad → 메뉴 씬과 무관)
             _camGo = new GameObject("ADOFAIMulti_IslandCamera");
@@ -73,43 +76,18 @@ namespace ADOFAIMulti
             cam.orthographic = true;
             cam.depth = 100;
             cam.cullingMask = 0;          // 그릴 3D 오브젝트 없음 (UI는 IMGUI)
-            Main.Log($"Island: hid {_hidden.Count} root objects, paused {_audio.Count} audio sources");
+            Main.Log($"Island: covered {_cams.Count} cameras, {_canvases.Count} canvases");
         }
 
         static void ShowGame()
         {
             if (_camGo != null) UnityEngine.Object.Destroy(_camGo);
             _camGo = null;
-            var shown = new List<GameObject>(_hidden);
-            foreach (var go in _hidden) if (go != null) go.SetActive(true);
-            ClearFx(shown);
-            _runner.StartCoroutine(ClearFxFrames(shown));
-            foreach (var a in _audio)
-            {
-                if (a.src == null || a.src.clip == null) continue;
-                try { a.src.time = Mathf.Min(a.time, a.src.clip.length - 0.01f); a.src.Play(); } catch { }
-            }
-            _hidden.Clear(); _audio.Clear();
+            foreach (var c in _cams) if (c != null) c.enabled = true;
+            foreach (var cv in _canvases) if (cv != null) cv.enabled = true;
+            AudioListener.volume = _savedVolume <= 0f ? 1f : _savedVolume;
+            _cams.Clear(); _canvases.Clear();
             InIsland = false;
-        }
-
-        /// <summary>
-        /// 다시 켠 메뉴의 파티클·트레일 비우기. 꺼져 있던 동안의 이동을 한꺼번에 이어 그려서
-        /// 행성 주변에 원 모양 잔상이 남기 때문 (켠 직후 몇 프레임은 다시 쌓이므로 여러 번 호출)
-        /// </summary>
-        static void ClearFx(List<GameObject> roots)
-        {
-            foreach (var go in roots)
-            {
-                if (go == null) continue;
-                foreach (var ps in go.GetComponentsInChildren<ParticleSystem>(true)) { try { ps.Clear(true); } catch { } }
-                foreach (var tr in go.GetComponentsInChildren<TrailRenderer>(true)) { try { tr.Clear(); } catch { } }
-            }
-        }
-
-        static IEnumerator ClearFxFrames(List<GameObject> roots)
-        {
-            for (int k = 0; k < 4; k++) { ClearFx(roots); yield return null; }
         }
 
         /// <summary>모드를 끌 때 등: 즉시 메뉴 복구</summary>

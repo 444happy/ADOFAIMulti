@@ -7,7 +7,7 @@ namespace ADOFAIMulti
 {
     public static class Main
     {
-        public const string Version = "0.8.1";
+        public const string Version = "0.8.2";
         public static UnityModManager.ModEntry Mod;
         public static Harmony Harmony;
         public static bool Enabled;
@@ -68,6 +68,7 @@ namespace ADOFAIMulti
             try
             {
                 MainThread.Drain();
+                Net.RetryInit();
                 Net.Poll();
                 Theme.SaveIfDirty();
                 Updater.Tick(this);

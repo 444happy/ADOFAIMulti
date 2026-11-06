@@ -18,7 +18,9 @@ namespace ADOFAIMulti
         static bool? _savedNoFail;
 
         /// <summary>멀티 로비가 메인 메뉴 위에 떠 있는 상태</summary>
-        public static bool MenuFrozen => Island.Busy && !IsScnGame;
+        public static bool MenuFrozen => (Island.InIsland || Island.Busy) && !IsScnGame;
+        /// <summary>메뉴 컨트롤러 Update 자체를 멈출지 (섬 안에 있을 때만 — 레벨 로딩 중엔 멈추면 안 됨)</summary>
+        public static bool MenuPaused => Island.InIsland && !IsScnGame;
 
         public static bool IsScnGame { get { try { return ADOBase.isScnGame; } catch { return false; } } }
         public static bool IsMainMenu { get { try { return ADOBase.isLevelSelect; } catch { return false; } } }
@@ -171,3 +173,19 @@ namespace ADOFAIMulti
     }
 }
 
+
+namespace ADOFAIMulti
+{
+    // 멀티 섬에 있는 동안 뒤에서 돌고 있는 메뉴가 키 입력(ESC로 종료/일시정지 등)을 처리하지 않게
+    [HarmonyPatch(typeof(scrController), "Update")]
+    static class Patch_FreezeMenuController
+    {
+        static bool Prefix() => !Game.MenuPaused;
+    }
+
+    [HarmonyPatch(typeof(scnCLS), "Update")]
+    static class Patch_FreezeCLS
+    {
+        static bool Prefix() => !Game.MenuPaused;
+    }
+}

@@ -1,7 +1,7 @@
 {
-  "Version": "0.8.1",
+  "Version": "0.8.2",
   "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
   "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
-  "Sha256": "f9bb58b0ad62ea509a5ad5fccd11b2cbdcb50c86519cd5a648a6edd5553b6bb2",
-  "Notes": "섬에서 나올 때 행성 잔상 제거"
+  "Sha256": "858aabb0b47c3f1a0233759b9981ea2782fa2ccac671eca9583b363f5a3fb48f",
+  "Notes": "섬 잔상 근본 수정 + 방 생성 진단"
 }

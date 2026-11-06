@@ -39,12 +39,13 @@ namespace ADOFAIMulti
         public static string Status = "";
 
         static byte[] _buf = new byte[1024 * 1024 + 1024];
-        static bool _inited;
+        static bool _inited, _creating;
 
         public static void Init()
         {
             if (_inited) return;
-            if (!SteamClient.IsValid) { Status = "Steam이 초기화되지 않았습니다 (Steam으로 실행해 주세요)"; return; }
+            if (!SteamClient.IsValid) { Status = "Steam 연결 대기 중... (Steam으로 실행했는지 확인)"; return; }
+            Main.Log("Net.Init: Steam ready, user " + SteamClient.SteamId.Value);
             _inited = true;
             SteamNetworking.AllowP2PPacketRelay(true);
             SteamNetworking.OnP2PSessionRequest += OnSessionRequest;
@@ -59,6 +60,15 @@ namespace ADOFAIMulti
             for (int i = 0; i < args.Length - 1; i++)
                 if (args[i] == "+connect_lobby" && ulong.TryParse(args[i + 1], out var id))
                     Session.RequestJoin(id);
+        }
+
+        static float _nextInitTry;
+        /// <summary>모드가 Steam보다 먼저 켜질 수 있어서, 준비될 때까지 1초마다 다시 시도</summary>
+        public static void RetryInit()
+        {
+            if (_inited || UnityEngine.Time.unscaledTime < _nextInitTry) return;
+            _nextInitTry = UnityEngine.Time.unscaledTime + 1f;
+            Init();
         }
 
         public static void Shutdown()
@@ -77,13 +87,20 @@ namespace ADOFAIMulti
         // ---------- Lobby ----------
         public static async void CreateRoom(int maxMembers)
         {
+            Main.Log($"CreateRoom: steamValid={SteamClient.IsValid} inited={_inited}");
             if (!_inited) Init();
-            if (!_inited) return;
+            if (!_inited) { Main.Log("CreateRoom: Steam not initialized → " + Status); return; }
+            if (_creating) return;
+            _creating = true;
             Status = "방 만드는 중...";
-            Lobby? lobby = await SteamMatchmaking.CreateLobbyAsync(maxMembers);
+            Lobby? lobby = null;
+            try { lobby = await SteamMatchmaking.CreateLobbyAsync(maxMembers); }
+            catch (Exception ex) { Main.Log("CreateLobbyAsync exception: " + ex); }
+            _creating = false;
+            Main.Log("CreateRoom: result " + (lobby.HasValue ? lobby.Value.Id.Value.ToString() : "null"));
             MainThread.Post(() =>
             {
-                if (!lobby.HasValue) { Status = "방 만들기 실패"; return; }
+                if (!lobby.HasValue) { Status = "방 만들기 실패 (Steam 연결을 확인해 주세요)"; return; }
                 var l = lobby.Value;
                 l.SetFriendsOnly();
                 l.SetJoinable(true);
@@ -97,11 +114,15 @@ namespace ADOFAIMulti
 
         public static async void Join(ulong lobbyId)
         {
+            Main.Log($"Join {lobbyId}: steamValid={SteamClient.IsValid} inited={_inited}");
             if (!_inited) Init();
-            if (!_inited) return;
+            if (!_inited) { Main.Log("Join: Steam not initialized → " + Status); return; }
             if (CurrentLobby.HasValue) Leave();
             Status = "참가하는 중...";
-            Lobby? lobby = await SteamMatchmaking.JoinLobbyAsync(lobbyId);
+            Lobby? lobby = null;
+            try { lobby = await SteamMatchmaking.JoinLobbyAsync(lobbyId); }
+            catch (Exception ex) { Main.Log("JoinLobbyAsync exception: " + ex); }
+            Main.Log("Join: result " + (lobby.HasValue ? "ok" : "null"));
             MainThread.Post(() => { if (!lobby.HasValue) Status = "참가 실패"; });
         }
 
