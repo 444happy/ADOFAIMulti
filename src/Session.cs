@@ -415,11 +415,13 @@ namespace ADOFAIMulti
                     Notice = "결과 발표!";
                     Game.RestoreSettings();
                     UI.ShowResults = true;
+                    UI.Page = UI.Tab.Results;   // 섬에 있으면 결과 탭으로
                     break;
                 case Msg.BackToLobby:
                     ResetMatch();
                     Phase = Phase.Lobby;
                     UI.ShowResults = false;
+                    UI.Page = Net.IsHost ? UI.Tab.Map : UI.Tab.Room;
                     if (Game.IsScnGame) Island.ReturnFromLevel();
                     else if (!Island.InIsland) Island.Enter();
                     if (Net.IsHost) foreach (var e in Peers.Values) { e.State = PState.Lobby; e.Stats = new Stats(); }

@@ -60,7 +60,8 @@ namespace ADOFAIMulti
             AudioListener.pause = false;
 
             InIsland = true;
-            UI.Page = Session.InRoom ? UI.Tab.Room : UI.Tab.Home;
+            if (Session.Results.Count > 0 && Session.Phase == Phase.Results) UI.Page = UI.Tab.Results;
+            else if (UI.Page == UI.Tab.Home && Session.InRoom) UI.Page = UI.Tab.Room;
             yield return Fade(0f);
             Busy = false;
         }

@@ -1,7 +1,7 @@
 {
-  "Version": "0.4.0",
+  "Version": "0.4.1",
   "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
   "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
-  "Sha256": "7820028a32784bcaaf16d89ee1c63f472bb0aeeb0045557c18e679da4385b0e7",
-  "Notes": "멀티 섬(독립 씬) 추가, Quartz 스타일 UI 개편"
+  "Sha256": "cc231596517bf53943f074d2ca414d4d72edfaa797094917db539fe92f01e419",
+  "Notes": "텍스트 깨짐 수정, 결과 탭 자동 이동"
 }

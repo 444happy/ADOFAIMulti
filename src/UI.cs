@@ -21,8 +21,8 @@ namespace ADOFAIMulti
             C_fire = Hex("ff6a4d"), C_ice = Hex("5ab8ff"), C_gold = Hex("ffd36b");
 
         static Texture2D T_bg, T_side, T_card, T_cardHi, T_acc, T_line, T_fire, T_ice, T_white, T_circle, T_dim, T_chip;
-        static GUIStyle S_h1, S_h2, S_txt, S_sub, S_small, S_num, S_card, S_cardBtn, S_btn, S_btnAcc, S_side, S_sideOn, S_field, S_chip, S_big, S_row, S_rowOn, S_logo;
-        static Font _font, _iconFont;
+        static GUIStyle S_para, S_paraTxt, S_h1, S_h2, S_txt, S_sub, S_small, S_num, S_card, S_cardBtn, S_btn, S_btnAcc, S_side, S_sideOn, S_field, S_chip, S_big, S_row, S_rowOn, S_logo;
+        static Font _font;
 
         static Color Hex(string h) { ColorUtility.TryParseHtmlString("#" + h, out var c); return c; }
         static string HexOf(Color c) => ColorUtility.ToHtmlStringRGB(c);
@@ -53,10 +53,16 @@ namespace ADOFAIMulti
             return s;
         }
 
-        static GUIStyle Label(int size, Color col, FontStyle fs = FontStyle.Normal, TextAnchor a = TextAnchor.MiddleLeft)
+        static readonly System.Collections.Generic.Dictionary<string, GUIStyle> _labelCache = new System.Collections.Generic.Dictionary<string, GUIStyle>();
+
+        /// <summary>라벨 스타일 (같은 조합은 캐시해서 매 프레임 새로 만들지 않음)</summary>
+        static GUIStyle Label(int size, Color col, FontStyle fs = FontStyle.Normal, TextAnchor a = TextAnchor.MiddleLeft, bool wrap = false)
         {
-            var s = new GUIStyle(GUI.skin.label) { font = _font, fontSize = size, fontStyle = fs, alignment = a, richText = true, wordWrap = true };
+            string key = size + "|" + HexOf(col) + "|" + (int)fs + "|" + (int)a + "|" + wrap;
+            if (_labelCache.TryGetValue(key, out var cached)) return cached;
+            var s = new GUIStyle(GUI.skin.label) { font = _font, fontSize = size, fontStyle = fs, alignment = a, richText = true, wordWrap = wrap, clipping = TextClipping.Clip };
             s.normal.textColor = col;
+            _labelCache[key] = s;
             return s;
         }
 
@@ -72,7 +78,6 @@ namespace ADOFAIMulti
         {
             if (S_h1 != null) return;
             try { _font = Font.CreateDynamicFontFromOSFont(new[] { "Pretendard", "Pretendard Variable", "Malgun Gothic", "맑은 고딕", "Segoe UI" }, 16); } catch { }
-            try { _iconFont = Font.CreateDynamicFontFromOSFont(new[] { "Segoe UI Symbol", "Segoe UI Emoji" }, 20); } catch { }
 
             T_bg = Solid(C_bg); T_side = Solid(C_side); T_line = Solid(C_line); T_white = Solid(Color.white);
             T_dim = Solid(new Color(0, 0, 0, 0.6f));
@@ -84,6 +89,8 @@ namespace ADOFAIMulti
             S_h2 = Label(19, C_txt, FontStyle.Bold);
             S_txt = Label(16, C_txt);
             S_sub = Label(14, C_sub);
+            S_para = Label(14, C_sub, FontStyle.Normal, TextAnchor.UpperLeft, true);
+            S_paraTxt = Label(16, C_txt, FontStyle.Normal, TextAnchor.UpperLeft, true);
             S_small = Label(13, C_sub);
             S_num = Label(30, C_acc);
             S_big = Label(72, Color.white, FontStyle.Bold, TextAnchor.MiddleCenter);
@@ -92,8 +99,8 @@ namespace ADOFAIMulti
             S_cardBtn = Button(T_card, T_cardHi, C_txt, 16, 0); S_cardBtn.alignment = TextAnchor.UpperLeft; S_cardBtn.padding = new RectOffset(16, 16, 14, 14); S_cardBtn.margin = new RectOffset(6, 6, 6, 6);
             S_btn = Button(Round(Hex("2c3d36")), Round(Hex("374b43")), C_txt, 16, 40);
             S_btnAcc = Button(T_acc, Round(Hex("8cf0c4")), Hex("0b1410"), 17, 46); S_btnAcc.fontStyle = FontStyle.Bold;
-            S_side = Button(null, Round(Hex("1c2a24")), C_sub, 22, 42); S_side.font = _iconFont ?? _font; S_side.padding = new RectOffset(0, 0, 0, 0); S_side.fixedWidth = 42;
-            S_sideOn = Button(Round(Hex("22342c")), Round(Hex("22342c")), C_acc, 22, 42); S_sideOn.font = _iconFont ?? _font; S_sideOn.padding = new RectOffset(0, 0, 0, 0); S_sideOn.fixedWidth = 42;
+            S_side = Button(null, Round(Hex("1c2a24")), C_sub, 13, 42); S_side.font = _font; S_side.padding = new RectOffset(0, 0, 0, 0); S_side.fixedWidth = 42;
+            S_sideOn = Button(Round(Hex("22342c")), Round(Hex("22342c")), C_acc, 13, 42); S_sideOn.font = _font; S_sideOn.fontStyle = FontStyle.Bold; S_sideOn.padding = new RectOffset(0, 0, 0, 0); S_sideOn.fixedWidth = 42;
             S_field = new GUIStyle(GUI.skin.textField) { font = _font, fontSize = 16, fixedHeight = 38, padding = new RectOffset(12, 12, 9, 9), border = new RectOffset(8, 8, 8, 8) };
             S_field.normal.background = Round(Hex("16211c")); S_field.focused.background = Round(Hex("1a2a23")); S_field.hover.background = S_field.normal.background;
             S_field.normal.textColor = S_field.focused.textColor = S_field.hover.textColor = C_txt;
@@ -169,18 +176,18 @@ namespace ADOFAIMulti
             GUI.DrawTexture(new Rect(0, 0, W, 48), T_side);
             Orbit(new Vector2(24, 24), 9, 6, 0.9f);
             GUI.Label(new Rect(48, 8, 400, 32), "A D O F A I   M U L T I", S_logo);
-            if (GUI.Button(new Rect(W - 50, 6, 40, 36), "✕", Label(24, C_txt, FontStyle.Normal, TextAnchor.MiddleCenter))) AskLeave();
+            if (GUI.Button(new Rect(W - 50, 6, 40, 36), "×", Label(24, C_txt, FontStyle.Normal, TextAnchor.MiddleCenter))) AskLeave();
 
             // sidebar
             GUI.DrawTexture(new Rect(0, 48, 56, H - 48), T_side);
             GUILayout.BeginArea(new Rect(7, 56, 42, H - 64));
-            SideBtn(Tab.Home, "⌂");
-            SideBtn(Tab.Room, "☰");
-            SideBtn(Tab.Map, "♫");
-            SideBtn(Tab.Results, "★");
-            SideBtn(Tab.Settings, "⚙");
+            SideBtn(Tab.Home, "홈");
+            SideBtn(Tab.Room, "방");
+            SideBtn(Tab.Map, "맵");
+            SideBtn(Tab.Results, "결과");
+            SideBtn(Tab.Settings, "설정");
             GUILayout.FlexibleSpace();
-            if (GUILayout.Button("⏻", S_side)) AskLeave();
+            if (GUILayout.Button("나가기", S_side)) AskLeave();
             GUILayout.Space(30);
             GUILayout.EndArea();
 
@@ -190,7 +197,7 @@ namespace ADOFAIMulti
             GUILayout.BeginHorizontal();
             GUILayout.Label("ADOFAI Multi " + Main.Version, S_small, GUILayout.ExpandWidth(false));
             GUILayout.Space(16);
-            string st = string.Join("  ·  ", new[] { Net.Status, Session.Notice }.Where(x => !string.IsNullOrEmpty(x)).ToArray());
+            string st = Esc(string.Join("  ·  ", new[] { Net.Status, Session.Notice }.Where(x => !string.IsNullOrEmpty(x)).ToArray()));
             GUILayout.Label(st, S_small);
             GUILayout.FlexibleSpace();
             if (Session.Phase == Phase.WaitingStart) { GUILayout.Label("F5", S_chip, GUILayout.ExpandWidth(false)); GUILayout.Label("준비", S_small, GUILayout.ExpandWidth(false)); GUILayout.Space(10); }
@@ -259,14 +266,16 @@ namespace ADOFAIMulti
         static void Title(string t, string sub)
         {
             GUILayout.Label(t, S_h1);
-            if (!string.IsNullOrEmpty(sub)) GUILayout.Label(sub, S_sub);
+            if (!string.IsNullOrEmpty(sub)) GUILayout.Label(sub, S_para);
             GUILayout.Space(8);
         }
 
-        static void StatCard(string num, string label, float width = 0)
+        /// <summary>콘텐츠 영역 폭을 n등분한 카드 폭 (카드 margin 12 고려)</summary>
+        static float Col(int n) => Mathf.Floor((Screen.width - 88f) / n) - 12f;
+
+        static void StatCard(string num, string label, float width)
         {
-            if (width > 0) GUILayout.BeginVertical(S_card, GUILayout.Width(width), GUILayout.Height(84));
-            else GUILayout.BeginVertical(S_card, GUILayout.Height(84));
+            GUILayout.BeginVertical(S_card, GUILayout.Width(width), GUILayout.Height(84));
             GUILayout.Label(num, S_num);
             GUILayout.Label(label, S_small);
             GUILayout.EndVertical();
@@ -286,16 +295,16 @@ namespace ADOFAIMulti
             if (!Session.InRoom)
             {
                 GUILayout.BeginHorizontal();
-                GUILayout.BeginVertical(S_card, GUILayout.Height(170));
+                GUILayout.BeginVertical(S_card, GUILayout.Width(Col(2)), GUILayout.Height(170));
                 GUILayout.Label("방 만들기", S_h2);
-                GUILayout.Label("내가 방장이 돼요. 맵을 고르면 모두에게 자동으로 전송돼요. 최대 8명.", S_sub);
+                GUILayout.Label("내가 방장이 돼요. 맵을 고르면 모두에게 자동으로 전송돼요. 최대 8명.", S_para);
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button("새 방 만들기", S_btnAcc)) { Net.CreateRoom(8); Page = Tab.Room; }
                 GUILayout.EndVertical();
 
-                GUILayout.BeginVertical(S_card, GUILayout.Height(170));
+                GUILayout.BeginVertical(S_card, GUILayout.Width(Col(2)), GUILayout.Height(170));
                 GUILayout.Label("참가하기", S_h2);
-                GUILayout.Label("Steam 친구 초대를 수락하면 자동으로 들어와요. 또는 로비 ID 입력:", S_sub);
+                GUILayout.Label("Steam 친구 초대를 수락하면 자동으로 들어와요. 또는 로비 ID 입력:", S_para);
                 GUILayout.FlexibleSpace();
                 GUILayout.BeginHorizontal();
                 _joinId = GUILayout.TextField(_joinId, S_field);
@@ -305,21 +314,21 @@ namespace ADOFAIMulti
                 GUILayout.EndHorizontal();
 
                 GUILayout.BeginHorizontal();
-                StatCard(CacheCount().ToString(), "받아둔 맵");
-                StatCard(MapBrowser.Items.Count.ToString(), "내 컴퓨터의 맵");
+                StatCard(CacheCount().ToString(), "받아둔 맵", Col(2));
+                StatCard(MapBrowser.Items.Count.ToString(), "내 컴퓨터의 맵", Col(2));
                 GUILayout.EndHorizontal();
                 MapBrowser.ScanOnce();
                 return;
             }
 
             GUILayout.BeginHorizontal();
-            StatCard($"{Session.Board.Count}/8", "참가자");
-            StatCard(PhaseText(), "진행 상태");
+            StatCard($"{Session.Board.Count}/8", "참가자", Col(2));
+            StatCard(PhaseText(), "진행 상태", Col(2));
             GUILayout.EndHorizontal();
 
             GUILayout.BeginVertical(S_card);
             GUILayout.Label("맵", S_h2);
-            GUILayout.Label(Session.MapHash != null ? $"{Session.MapTitle}   <color=#{HexOf(C_sub)}>{Session.MapSize / 1048576f:0.0}MB</color>" : (Net.IsHost ? "맵 탭에서 맵을 골라 배포하세요." : "방장이 맵을 고르는 중..."), S_txt);
+            GUILayout.Label(Session.MapHash != null ? $"{Esc(Session.MapTitle)}   <color=#{HexOf(C_sub)}>{Session.MapSize / 1048576f:0.0}MB</color>" : (Net.IsHost ? "맵 탭에서 맵을 골라 배포하세요." : "방장이 맵을 고르는 중..."), S_paraTxt);
             GUILayout.EndVertical();
 
             GUILayout.BeginVertical(S_card);
@@ -355,7 +364,7 @@ namespace ADOFAIMulti
             {
                 GUILayout.BeginHorizontal();
                 PeerCard(list[i]);
-                if (i + 1 < list.Count) PeerCard(list[i + 1]); else GUILayout.FlexibleSpace();
+                if (i + 1 < list.Count) PeerCard(list[i + 1]);
                 GUILayout.EndHorizontal();
             }
             GUILayout.EndScrollView();
@@ -363,7 +372,7 @@ namespace ADOFAIMulti
 
         static void PeerCard(Entry p)
         {
-            GUILayout.BeginVertical(S_card, GUILayout.Height(92), GUILayout.MinWidth(260));
+            GUILayout.BeginVertical(S_card, GUILayout.Width(Col(2)), GUILayout.Height(92));
             string crown = p.Id == Net.HostId ? $"<color=#{HexOf(C_gold)}>방장</color>  " : "";
             string me = p.Id == Net.MyId ? $"  <color=#{HexOf(C_acc)}>(나)</color>" : "";
             GUILayout.Label($"{crown}{Trim(p.Name, 18)}{me}", S_h2);
@@ -379,13 +388,12 @@ namespace ADOFAIMulti
             if (!Net.IsHost) { MemberDownload(); return; }
 
             bool busy = Session.Phase == Phase.Packing || Session.InMatch;
-            Title("맵", Session.MapHash != null ? $"현재: {Session.MapTitle} ({Session.MapSize / 1048576f:0.0}MB)" : "배포할 맵을 고르세요");
+            Title("맵", Session.MapHash != null ? $"현재: {Esc(Session.MapTitle)} ({Session.MapSize / 1048576f:0.0}MB)" : "배포할 맵을 고르세요");
 
             GUILayout.BeginHorizontal();
             _search = GUILayout.TextField(_search, S_field);
             if (GUILayout.Button(MapBrowser.Scanning ? "검색 중..." : "새로고침", S_btn, GUILayout.Width(120))) MapBrowser.Rescan();
             GUILayout.EndHorizontal();
-            if (_search.Length == 0) GUI.Label(GUILayoutUtility.GetLastRect(), "", S_sub);
             MapBrowser.ScanOnce();
 
             GUILayout.BeginVertical(S_card, GUILayout.ExpandHeight(true));
@@ -399,7 +407,7 @@ namespace ADOFAIMulti
                 bool sel = it.Path == _mapPath;
                 if (GUILayout.Button($"{Trim(it.Label, 64)}   <color=#{HexOf(C_sub)}><size=12>{Trim(it.Author, 24)}</size></color>", sel ? S_rowOn : S_row)) _mapPath = it.Path;
             }
-            if (MapBrowser.Items.Count == 0 && !MapBrowser.Scanning) GUILayout.Label("맵을 못 찾았어요. 아래에 .adofai 경로를 직접 넣어주세요.", S_sub);
+            if (MapBrowser.Items.Count == 0 && !MapBrowser.Scanning) GUILayout.Label("맵을 못 찾았어요. 아래에 .adofai 경로를 직접 넣어주세요.", S_para);
             GUILayout.EndScrollView();
             GUILayout.EndVertical();
 
@@ -414,7 +422,7 @@ namespace ADOFAIMulti
 
         static void MemberDownload()
         {
-            Title("맵", Session.MapHash != null ? $"{Session.MapTitle} ({Session.MapSize / 1048576f:0.0}MB)" : "방장이 맵을 고르는 중...");
+            Title("맵", Session.MapHash != null ? $"{Esc(Session.MapTitle)} ({Session.MapSize / 1048576f:0.0}MB)" : "방장이 맵을 고르는 중...");
             if (Session.Phase != Phase.Distributing || Session.MapSize <= 0) return;
             GUILayout.BeginVertical(S_card);
             if (Session.DlCancelled)
@@ -478,13 +486,13 @@ namespace ADOFAIMulti
             Title("설정", null);
             GUILayout.BeginVertical(S_card);
             GUILayout.Label("업데이트", S_h2);
-            GUILayout.Label($"현재 v{Main.Version}   ·   {Updater.StatusText}", S_sub);
+            GUILayout.Label($"현재 v{Main.Version}   ·   {Updater.StatusText}", S_para);
             if (Updater.Current == Updater.State.Failed) GUILayout.Label(Updater.Error, S_small);
             GUILayout.EndVertical();
 
             GUILayout.BeginVertical(S_card);
             GUILayout.Label("받은 맵 캐시", S_h2);
-            GUILayout.Label($"{CacheCount()}개 · {CacheSizeMB():0.0}MB   ({MapPack.Root})", S_sub);
+            GUILayout.Label($"{CacheCount()}개 · {CacheSizeMB():0.0}MB   ({MapPack.Root})", S_para);
             GUI.enabled = !Session.InMatch;
             if (GUILayout.Button("캐시 비우기", S_btn, GUILayout.Width(160))) { try { Directory.Delete(MapPack.Root, true); } catch { } }
             GUI.enabled = true;
@@ -492,7 +500,7 @@ namespace ADOFAIMulti
 
             GUILayout.BeginVertical(S_card);
             GUILayout.Label("단축키", S_h2);
-            GUILayout.Label("Ctrl + M  멀티 섬 열기/떠나기   ·   F5  준비   ·   Ctrl + Shift + Q  기권", S_sub);
+            GUILayout.Label("Ctrl + M  멀티 섬 열기/떠나기   ·   F5  준비   ·   Ctrl + Shift + Q  기권", S_para);
             GUILayout.EndVertical();
         }
 
@@ -502,7 +510,7 @@ namespace ADOFAIMulti
             var r = new Rect((Screen.width - 440) / 2f, (Screen.height - 190) / 2f, 440, 190);
             GUILayout.BeginArea(r, S_card);
             GUILayout.Label("섬을 떠날까요?", S_h2);
-            GUILayout.Label(Net.IsHost ? "방장이 떠나면 방이 사라져요." : "방에서 나가게 돼요. 다시 들어오려면 초대를 받아야 해요.", S_sub);
+            GUILayout.Label(Net.IsHost ? "방장이 떠나면 방이 사라져요." : "방에서 나가게 돼요. 다시 들어오려면 초대를 받아야 해요.", S_para);
             GUILayout.FlexibleSpace();
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("방만 나가기", S_btn)) { _confirmLeave = false; Session.LeaveRoom(); Page = Tab.Home; }
@@ -531,7 +539,7 @@ namespace ADOFAIMulti
                 float ry = box.y + 32 + (rank - 1) * 26;
                 bool me = e.Id == Net.MyId;
                 GUI.Label(new Rect(box.x + 14, ry, 24, 24), rank.ToString(), Label(15, rank == 1 ? C_gold : C_sub, FontStyle.Bold));
-                GUI.Label(new Rect(box.x + 36, ry, 120, 24), Trim(e.Name, 9) + (e.State == PState.Finished ? " ✓" : ""), Label(15, me ? C_acc : C_txt));
+                GUI.Label(new Rect(box.x + 36, ry, 120, 24), Trim(e.Name, 9) + (e.State == PState.Finished ? " (완주)" : ""), Label(15, me ? C_acc : C_txt));
                 GUI.Label(new Rect(box.x + 150, ry, 80, 24), $"{e.Stats.Acc * 100:0.00}%", Label(15, me ? C_acc : C_txt, FontStyle.Bold, TextAnchor.MiddleRight));
                 GUI.Label(new Rect(box.x + 236, ry, 54, 24), $"{e.Stats.Progress * 100:0}%", Label(12, C_sub, FontStyle.Normal, TextAnchor.MiddleRight));
                 rank++;
@@ -615,6 +623,7 @@ namespace ADOFAIMulti
         }
 
         static string StripTags(string s) => System.Text.RegularExpressions.Regex.Replace(s ?? "", "<[^>]+>", "");
-        static string Trim(string s, int n) => string.IsNullOrEmpty(s) ? "" : (s.Length > n ? s.Substring(0, n) + "…" : s);
+        static string Esc(string s) => (s ?? "").Replace("<", "\uFF1C").Replace(">", "\uFF1E");
+        static string Trim(string s, int n) => string.IsNullOrEmpty(s) ? "" : Esc(s.Length > n ? s.Substring(0, n) + "…" : s);
     }
 }
