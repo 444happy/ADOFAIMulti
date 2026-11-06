@@ -1,5 +1,7 @@
 build/
 dist/
-*.dll
 *.exe
+*.dll
 *.zip
+!release/*.dll
+!release/*.zip

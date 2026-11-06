@@ -1,0 +1,7 @@
+{
+  "Version": "0.3.0",
+  "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
+  "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
+  "Sha256": "709144b87c3172c3b39e5281f09a2afe39ad0431f605c420ddc195e1b27e9bec",
+  "Notes": "자동 업데이트, 멀티 전용 로비, ESC/재시작 방지, 맵 찾기"
+}

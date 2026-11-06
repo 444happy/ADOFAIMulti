@@ -9,7 +9,7 @@ using UnityEngine.Networking;
 namespace ADOFAIMulti
 {
     /// <summary>
-    /// 게임 시작 시 GitHub 최신 릴리스의 version.json을 확인하고,
+    /// 게임 시작 시 GitHub 저장소 release/version.json을 확인하고,
     /// 새 버전이면 dll/Info.json을 받아 교체해 둔다 (다음 실행부터 적용).
     /// </summary>
     public static class Updater
@@ -18,7 +18,8 @@ namespace ADOFAIMulti
         public const string Owner = "__OWNER__";
         public const string Repo = "ADOFAIMulti";
 
-        public static string VersionUrl => $"https://github.com/{Owner}/{Repo}/releases/latest/download/version.json";
+        public static string BaseUrl => $"https://raw.githubusercontent.com/{Owner}/{Repo}/main/release";
+        public static string VersionUrl => BaseUrl + "/version.json";
 
         public enum State { Idle, Checking, UpToDate, Downloading, ReadyToRestart, Failed }
         public static State Current = State.Idle;

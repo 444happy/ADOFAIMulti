@@ -11,9 +11,9 @@ A Dance of Fire and Ice 친구끼리 멀티 모드 (UnityModManager)
 
 ## 설치
 1. [UnityModManager](https://www.nexusmods.com/site/mods/21) 설치
-2. [최신 릴리스](https://github.com/444happy/ADOFAIMulti/releases/latest)에서
-   - `ADOFAIMulti_Installer.zip` → 압축 풀고 설치기 실행, 또는
-   - `ADOFAIMulti_UMM.zip` → UMM의 Mods 탭에 그대로 드래그
+2. 다운로드
+   - [ADOFAIMulti_Installer.zip](https://github.com/444happy/ADOFAIMulti/raw/main/release/ADOFAIMulti_Installer.zip) → 압축 풀고 설치기 실행, 또는
+   - [ADOFAIMulti_UMM.zip](https://github.com/444happy/ADOFAIMulti/raw/main/release/ADOFAIMulti_UMM.zip) → UMM의 Mods 탭에 그대로 드래그
 3. 게임 실행 → 메인 메뉴 오른쪽 아래 **멀티플레이**
 
 ## 빌드

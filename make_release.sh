@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 사용법: ./make_release.sh <github-owner> "<변경사항 한 줄>"
-# 결과: dist/v<버전>/ 에 GitHub 릴리스에 올릴 파일 전부 생성
+# 결과: release/ 에 배포 파일 생성 → 커밋/푸시하면 모두에게 자동 업데이트
 set -euo pipefail
 OWNER="$1"; NOTES="${2:-}"
 REPO=ADOFAIMulti
@@ -10,9 +10,9 @@ CSC=$(ls /usr/lib/dotnet/sdk/*/Roslyn/bincore/csc.dll | head -1)
 
 VER=$(grep -oP 'Version = "\K[^"]+' "$ROOT/src/Main.cs")
 TAG="v$VER"
-DL="https://github.com/$OWNER/$REPO/releases/download/$TAG"
-LATEST="https://github.com/$OWNER/$REPO/releases/latest/download"
-OUT="$ROOT/dist/$TAG"; rm -rf "$OUT"; mkdir -p "$OUT"
+DL="https://raw.githubusercontent.com/$OWNER/$REPO/main/release"
+LATEST="$DL"
+OUT="$ROOT/release"; rm -rf "$OUT"; mkdir -p "$OUT"
 BUILD="$ROOT/build"; mkdir -p "$BUILD"
 
 # 1) 소스에 저장소 주인 반영 후 빌드
