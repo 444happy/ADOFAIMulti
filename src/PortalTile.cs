@@ -118,7 +118,7 @@ namespace ADOFAIMulti
             _offByUs.Clear();
             // 시작 화면 중심: 메뉴의 원점 타일(타이틀 아래 3x3 가운데). 원점에 타일이 없으면 행성 위치.
             // (레벨에서 나와 메뉴가 다른 곳에서 시작해도 기준이 흔들리지 않게 원점 우선)
-            _spawn = pos.Any(q => q.magnitude < unit * 0.5f) ? Vector2.zero : (PlayerPos() ?? (Vector2)bestParent.transform.position);
+            _spawn = pos.Any(q => q.magnitude < unit * 0.5f) ? Vector2.zero : (PlayerPos() ?? Vector2.zero);
             Hidden = false;
             UpdateVisibility(true);
             Main.Log($"Portal: placed at {best} (unit {unit:0.00}) next to {bestParent.name}");
@@ -131,17 +131,23 @@ namespace ADOFAIMulti
             return cam != null ? cam : Camera.main;
         }
 
-        /// <summary>행성(현재 타일)의 위치. 못 구하면 카메라 위치</summary>
+        /// <summary>
+        /// 행성 중심축(지금 서 있는 쪽 행성)의 위치. 게임을 막 켰을 땐 currFloor 가 아직 비어 있을 수 있어서
+        /// 행성 위치를 먼저 보고, 그것도 없으면 null (= 시작 화면으로 보고 숨김)
+        /// </summary>
         static Vector2? PlayerPos()
         {
             try
             {
-                var f = ADOBase.controller?.currFloor;
+                var c = ADOBase.controller;
+                if (c == null) return null;
+                var p = c.chosenPlanet;
+                if (p != null) return (Vector2)p.transform.position;
+                var f = c.currFloor;
                 if (f != null) return (Vector2)f.transform.position;
             }
             catch { }
-            var cam = Cam();
-            return cam != null ? (Vector2?)(Vector2)cam.transform.position : null;
+            return null;
         }
 
         /// <summary>
@@ -153,7 +159,7 @@ namespace ADOFAIMulti
         {
             if (Floor == null) return;
             var pos = PlayerPos();
-            bool hide = pos == null || Vector2.Distance(pos.Value, _spawn) < _unit * 0.5f;   // 정가운데 타일 위에 있을 때만 숨김
+            bool hide = pos == null || Vector2.Distance(pos.Value, _spawn) < _unit * 0.6f;   // 정가운데 타일 위에 있을 때만 숨김
             var go = Floor.gameObject;
             if (hide)
             {
