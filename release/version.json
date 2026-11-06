@@ -1,7 +1,7 @@
 {
-  "Version": "0.11.1",
+  "Version": "0.11.2",
   "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
   "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
-  "Sha256": "ac3eb6eb0f3fcf3f164eccd8da47ddcc8b6041fd04cba0949cdf3fa2ee1f49b3",
-  "Notes": "멀티 포탈이 안 보이던 문제 수정 (직접 그리기)"
+  "Sha256": "05aed3f1443fdfd9a6f69c8a385435c008c25d34732cefa847338c170790d2d7",
+  "Notes": "일부 PC에서 시작 시 오류창(MethodAccessException)이 뜨던 문제 수정"
 }

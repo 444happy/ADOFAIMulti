@@ -19,7 +19,7 @@ BUILD="$ROOT/build"; mkdir -p "$BUILD"
 sed "s/__OWNER__/$OWNER/" "$ROOT/src/Updater.cs" > /tmp/Updater.gen.cs
 SRCS=$(ls "$ROOT"/src/*.cs | grep -v Updater.cs)
 REFS=""; for f in "$M"/*.dll "$M"/UnityModManager/UnityModManager.dll "$M"/UnityModManager/0Harmony.dll; do REFS="$REFS -r:$f"; done
-dotnet "$CSC" -nologo -noconfig -nostdlib -target:library -langversion:9 -optimize -nowarn:1701,1702 \
+dotnet "$CSC" -nologo -noconfig -nostdlib -target:library -langversion:9 -optimize -nowarn:1701,1702,0436 \
   -out:"$BUILD/ADOFAIMulti.dll" $REFS $SRCS /tmp/Updater.gen.cs
 
 # 2) Info.json (UMM이 업데이트 확인할 Repository 포함)
@@ -38,7 +38,7 @@ cat > "$BUILD/Info.json" <<EOF
 EOF
 
 # 3) 설치기 exe
-dotnet "$CSC" -nologo -noconfig -nostdlib -target:exe -platform:anycpu -langversion:9 -optimize -nowarn:1701,1702 \
+dotnet "$CSC" -nologo -noconfig -nostdlib -target:exe -platform:anycpu -langversion:9 -optimize -nowarn:1701,1702,0436 \
   -out:"$BUILD/ADOFAIMulti_Installer.exe" -r:$M/mscorlib.dll -r:$M/System.dll -r:$M/System.Core.dll \
   -resource:"$BUILD/ADOFAIMulti.dll",ADOFAIMulti.dll -resource:"$BUILD/Info.json",Info.json "$ROOT/installer/Installer.cs"
 
