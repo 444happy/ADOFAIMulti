@@ -1,7 +1,7 @@
 {
-  "Version": "0.3.0",
+  "Version": "0.4.0",
   "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
   "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
-  "Sha256": "709144b87c3172c3b39e5281f09a2afe39ad0431f605c420ddc195e1b27e9bec",
-  "Notes": "자동 업데이트, 멀티 전용 로비, ESC/재시작 방지, 맵 찾기"
+  "Sha256": "7820028a32784bcaaf16d89ee1c63f472bb0aeeb0045557c18e679da4385b0e7",
+  "Notes": "멀티 섬(독립 씬) 추가, Quartz 스타일 UI 개편"
 }

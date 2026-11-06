@@ -24,7 +24,7 @@ namespace ADOFAIMulti
         public static void RequestJoin(ulong lobbyId)
         {
             if (Game.IsScnGame) { _pendingJoin = lobbyId; Notice = "레벨을 나가면 초대받은 방에 들어갑니다"; return; }
-            UI.LobbyOpen = true;
+            Island.Enter();
             Net.Join(lobbyId);
         }
 
@@ -39,8 +39,7 @@ namespace ADOFAIMulti
             Phase = Phase.Results;
             Notice = "기권했습니다. 다른 플레이어를 기다리는 중...";
             Game.RestoreSettings();
-            Game.QuitToMenu();
-            UI.LobbyOpen = true;
+            Island.ReturnFromLevel();
         }
         public static bool InRoom => Phase != Phase.None;
         public static string Notice = "";
@@ -250,7 +249,7 @@ namespace ADOFAIMulti
             if (_pendingJoin != 0 && !Game.IsScnGame) { var id = _pendingJoin; _pendingJoin = 0; RequestJoin(id); }
             if (!InRoom) return;
             // 방에 있는 동안 메뉴로 나오면 항상 멀티 로비 화면 (멀티는 로비 안에서만)
-            if (!Game.IsScnGame && !UI.LobbyOpen && Phase != Phase.Loading) UI.LobbyOpen = true;
+            if (!Game.IsScnGame && !Island.InIsland && !Island.Busy && Phase != Phase.Loading) Island.Enter();
             if (Game.InGame && Input.GetKeyDown(KeyCode.Q) && Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.LeftShift)) Forfeit();
             if (Net.IsHost) HostTick();
 
@@ -295,7 +294,7 @@ namespace ADOFAIMulti
                         st.Finished = won;
                         LastStats = st;
                         Net.SendToHost(Packet.Build(Msg.Progress, w => st.Write(w)));
-                        if (won) { Phase = Phase.Results; Notice = "다른 플레이어를 기다리는 중..."; Game.RestoreSettings(); if (!Game.IsScnGame) UI.LobbyOpen = true; }
+                        if (won) { Phase = Phase.Results; Notice = "다른 플레이어를 기다리는 중..."; Game.RestoreSettings(); }
                     }
                     break;
             }
@@ -398,8 +397,8 @@ namespace ADOFAIMulti
                     if (hash != MapHash) return;
                     var path = Net.IsHost ? _hostLevelPath : MapPack.LevelPath(MapHash, MapRel);
                     MyReady = false;
-                    if (Game.LoadLevel(path, out var err)) { Phase = Phase.Loading; Notice = "레벨 불러오는 중..."; UI.LobbyOpen = false; }
-                    else Notice = err;
+                    Phase = Phase.Loading; Notice = "레벨 불러오는 중...";
+                    Island.PlayLevel(path, (ok, err) => { if (!ok) { Notice = err; Phase = Phase.Lobby; } });
                     break;
                 }
                 case Msg.Go:
@@ -421,8 +420,8 @@ namespace ADOFAIMulti
                     ResetMatch();
                     Phase = Phase.Lobby;
                     UI.ShowResults = false;
-                    Game.QuitToMenu();
-                    UI.LobbyOpen = true;
+                    if (Game.IsScnGame) Island.ReturnFromLevel();
+                    else if (!Island.InIsland) Island.Enter();
                     if (Net.IsHost) foreach (var e in Peers.Values) { e.State = PState.Lobby; e.Stats = new Stats(); }
                     Notice = "로비로 돌아왔습니다";
                     break;

@@ -18,7 +18,7 @@ namespace ADOFAIMulti
         static bool? _savedNoFail;
 
         /// <summary>멀티 로비가 메인 메뉴 위에 떠 있는 상태</summary>
-        public static bool MenuFrozen => UI.LobbyOpen && !IsScnGame;
+        public static bool MenuFrozen => Island.Busy && !IsScnGame;
 
         public static bool IsScnGame { get { try { return ADOBase.isScnGame; } catch { return false; } } }
         public static bool IsMainMenu { get { try { return ADOBase.isLevelSelect; } catch { return false; } } }
@@ -45,7 +45,7 @@ namespace ADOFAIMulti
         }
 
         /// <summary>무적 + 배속/연습 해제 후 커스텀 레벨 로드</summary>
-        public static bool LoadLevel(string path, out string error)
+        public static bool LoadLevelNow(string path, out string error)
         {
             error = null;
             var ctrl = ADOBase.controller;
@@ -160,13 +160,6 @@ namespace ADOFAIMulti
         }
     }
 
-    // ---- 멀티 로비 화면이 열려 있으면 뒤의 메인 메뉴는 입력을 못 받게 ----
-    [HarmonyPatch(typeof(scrController), "Update")]
-    static class Patch_FreezeMenu
-    {
-        static bool Prefix() => !Game.MenuFrozen;
-    }
-
     [HarmonyPatch(typeof(scrPlayer), nameof(scrPlayer.ValidInputWasTriggered))]
     static class Patch_FreezeMenuInput
     {
@@ -178,12 +171,3 @@ namespace ADOFAIMulti
     }
 }
 
-namespace ADOFAIMulti
-{
-    // 커스텀 레벨 선택 화면(CLS) 위에 로비가 떠 있을 때도 뒤 화면 입력 차단
-    [HarmonyPatch(typeof(scnCLS), "Update")]
-    static class Patch_FreezeCLS
-    {
-        static bool Prefix() => !Game.MenuFrozen;
-    }
-}

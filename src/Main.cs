@@ -7,7 +7,7 @@ namespace ADOFAIMulti
 {
     public static class Main
     {
-        public const string Version = "0.3.0";
+        public const string Version = "0.4.0";
         public static UnityModManager.ModEntry Mod;
         public static Harmony Harmony;
         public static bool Enabled;
@@ -22,7 +22,7 @@ namespace ADOFAIMulti
             Mod.OnToggle = OnToggle;
             Mod.OnGUI = _ =>
             {
-                GUILayout.Label("메인 메뉴 오른쪽 아래 [멀티플레이] 버튼 또는 Ctrl + M 으로 멀티 로비에 들어갑니다. (v" + Version + ")");
+                GUILayout.Label("메인 메뉴 오른쪽 아래 [멀티 섬으로] 또는 Ctrl + M 으로 멀티 섬에 들어갑니다. (v" + Version + ")");
                 GUILayout.Label("업데이트: " + System.Text.RegularExpressions.Regex.Replace(Updater.StatusText, "<[^>]+>", ""));
             };
             return true;
@@ -39,6 +39,7 @@ namespace ADOFAIMulti
                 _host = new GameObject("ADOFAIMulti");
                 UnityEngine.Object.DontDestroyOnLoad(_host);
                 var runner = _host.AddComponent<Runner>();
+                Island.Init(runner);
                 Net.Init();
                 Updater.CleanupOld();
                 runner.StartCoroutine(Updater.CheckAndUpdate());
@@ -66,7 +67,10 @@ namespace ADOFAIMulti
                 Session.Update();
                 // 멀티 로비는 메뉴 화면에서만 열 수 있음 (레벨 안에서는 안 열림)
                 if (Input.GetKeyDown(KeyCode.M) && (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && !Game.IsScnGame)
-                    UI.ToggleLobby();
+                {
+                    if (!Island.InIsland) Island.Enter();
+                    else if (!Session.InRoom) Island.Leave();
+                }
             }
             catch (Exception ex) { Main.Log("Update error: " + ex); }
         }
