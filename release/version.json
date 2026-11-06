@@ -1,7 +1,7 @@
 {
-  "Version": "0.9.0",
+  "Version": "0.10.0",
   "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
   "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
-  "Sha256": "151c2a53f78a693ed97a9bb14dcaa7ed3f09ef105d3a44ecc0ba6ed39549e41a",
-  "Notes": "Steam 오프라인에서도 멀티 (방 코드 + 중계 서버)"
+  "Sha256": "8a66daca9d3fad54117f89999eac91efc3de9cbf0699c7598a6337dc23aaa25e",
+  "Notes": "TUF에서 맵 검색·선택, 각자 CDN에서 직접 다운로드"
 }

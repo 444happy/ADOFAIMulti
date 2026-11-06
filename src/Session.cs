@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -48,6 +49,16 @@ namespace ADOFAIMulti
         // 현재 맵
         public static string MapHash, MapRel, MapTitle, MapSong = "", MapArtist = "", MapAuthor = "";
         public static string HostLevelPath => _hostLevelPath;
+        // 맵 출처: 0 = 방장 PC (방장이 중계로 전송), 1 = TUF (각자 CDN에서 직접 받고, 실패하면 방장 중계)
+        public static byte MapSource;
+        public static int MapTufId;
+        public static string MapDlUrl = "", MapDiff = "";
+        public static Color MapDiffColor = Color.gray;
+        static Tuf.Level _lastTuf;
+        static FileDownload _tufDl;
+        static float _nextTufReport;
+        /// <summary>방장이 TUF에서 맵을 받는 중일 때 진행률 (UI 표시용, 없으면 -1)</summary>
+        public static float HostFetchProgress = -1;
         public static long MapSize;
         static string _hostZip, _hostLevelPath;
 
@@ -119,6 +130,7 @@ namespace ADOFAIMulti
                 MainThread.Post(() =>
                 {
                     MapHash = p.Hash; MapRel = p.RelLevelFile; MapTitle = p.Title; MapSize = p.Size;
+                    MapSource = 0; MapTufId = 0; MapDlUrl = ""; MapDiff = ""; _lastTuf = null;
                     var info = MapBrowser.ReadInfo(levelPath);
                     MapSong = info?.Song ?? ""; MapArtist = info?.Artist ?? ""; MapAuthor = info?.Author ?? "";
                     _hostZip = p.ZipFile; _hostLevelPath = levelPath;
@@ -133,7 +145,70 @@ namespace ADOFAIMulti
             catch (Exception ex) { MainThread.Post(() => { Phase = Phase.Lobby; Notice = "압축 실패: " + ex.Message; }); }
         }
 
-        static byte[] OfferPacket() => Packet.Build(Msg.MapOffer, w => { w.Write(MapHash); w.Write(MapSize); w.Write(MapRel); w.Write(MapTitle); w.Write(MapSong ?? ""); w.Write(MapArtist ?? ""); w.Write(MapAuthor ?? ""); });
+        static byte[] OfferPacket() => Packet.Build(Msg.MapOffer, w =>
+        {
+            w.Write(MapHash); w.Write(MapSize); w.Write(MapRel); w.Write(MapTitle); w.Write(MapSong ?? ""); w.Write(MapArtist ?? ""); w.Write(MapAuthor ?? "");
+            w.Write(MapSource); w.Write(MapTufId); w.Write(MapDlUrl ?? ""); w.Write(MapDiff ?? ""); w.Write(ColorUtility.ToHtmlStringRGB(MapDiffColor));
+        });
+
+        /// <summary>방장: TUF 레벨을 받아서(캐시 있으면 건너뜀) 압축 풀고 모두에게 배포</summary>
+        public static void HostDistributeTuf(Tuf.Level lv)
+        {
+            if (!Net.IsHost || lv == null || !lv.CanDownload) return;
+            if (Phase == Phase.Packing || (InMatch && Phase != Phase.Results)) return;
+            Runner.Instance.StartCoroutine(HostTufCo(lv));
+        }
+
+        static IEnumerator HostTufCo(Tuf.Level lv)
+        {
+            Phase = Phase.Packing;
+            string hash = lv.Hash;
+            string zip = MapPack.ZipPath(hash), dir = MapPack.MapDir(hash);
+            Directory.CreateDirectory(MapPack.Root);
+            if (!File.Exists(zip))
+            {
+                Notice = $"TUF에서 받는 중: {lv.Song}";
+                var dl = new FileDownload(lv.DlLink, zip + ".part");
+                HostFetchProgress = 0;
+                var co = Runner.Instance.StartCoroutine(dl.Run(null));
+                while (dl.Running || (!dl.Done && !dl.Failed && !dl.Cancelled)) { HostFetchProgress = dl.Progress; yield return null; if (!InRoom) { dl.Cancelled = true; } }
+                HostFetchProgress = -1;
+                if (!dl.Done) { Phase = Phase.Lobby; Notice = "TUF에서 받지 못했어요: " + dl.Error; yield break; }
+                if (File.Exists(zip)) File.Delete(zip);
+                File.Move(zip + ".part", zip);
+            }
+            Notice = "압축 푸는 중...";
+            string rel = null; Exception err = null;
+            var t = System.Threading.Tasks.Task.Run(() =>
+            {
+                try
+                {
+                    rel = MapPack.FindLevelFile(dir);
+                    if (rel == null) { MapPack.SafeExtract(zip, dir); rel = MapPack.FindLevelFile(dir); }
+                }
+                catch (Exception ex) { err = ex; }
+            });
+            while (!t.IsCompleted) yield return null;
+            if (err != null || rel == null) { Phase = Phase.Lobby; Notice = rel == null && err == null ? "zip 안에 .adofai 파일이 없어요" : "압축을 풀지 못했어요: " + err?.Message; yield break; }
+            if (!InRoom || !Net.IsHost) yield break;
+
+            MapHash = hash; MapRel = rel; MapTitle = lv.Song; MapSize = new FileInfo(zip).Length;
+            MapSong = lv.Song; MapArtist = lv.Artist; MapAuthor = lv.Creator;
+            MapSource = 1; MapTufId = lv.Id; MapDlUrl = lv.DlLink; MapDiff = lv.Diff; MapDiffColor = lv.DiffColor;
+            _hostZip = zip; _hostLevelPath = MapPack.LevelPath(hash, rel); _lastTuf = lv;
+            foreach (var e in Peers.Values) { e.State = PState.Lobby; e.Download = 0; e.Stats = new Stats(); }
+            Peers[Net.MyId].State = PState.HasMap; Peers[Net.MyId].Download = 1;
+            Phase = Phase.Distributing;
+            Notice = $"맵 배포 중 (TUF): {lv.Song}";
+            Net.Broadcast(OfferPacket());
+        }
+
+        /// <summary>방장: 같은 맵으로 한 판 더 (TUF 맵이면 캐시에서 바로)</summary>
+        public static void HostRedo()
+        {
+            if (_lastTuf != null && MapSource == 1) HostDistributeTuf(_lastTuf);
+            else if (!string.IsNullOrEmpty(_hostLevelPath)) HostDistribute(_hostLevelPath);
+        }
 
         /// <summary>맵 없는 사람(취소한 사람)은 빼고 강제로 레벨 로드</summary>
         public static void HostStartLoad()
@@ -203,9 +278,25 @@ namespace ADOFAIMulti
         }
 
         // ===================== 멤버 동작 =====================
-        public static void DlPause() { DlPaused = true; Net.SendToHost(Packet.Build(Msg.MapPause)); }
-        public static void DlResume() { DlPaused = false; Net.SendToHost(Packet.Build(Msg.MapNeed, w => { w.Write(MapHash); w.Write(DlReceived); })); }
-        public static void DlCancel() { DlCancelled = true; CloseDownload(true); Net.SendToHost(Packet.Build(Msg.MapCancel)); }
+        public static void DlPause()
+        {
+            DlPaused = true;
+            if (_tufDl != null) _tufDl.Paused = true;
+            Net.SendToHost(Packet.Build(Msg.MapPause));
+        }
+        public static void DlResume()
+        {
+            DlPaused = false;
+            if (_tufDl != null) { _tufDl.Paused = false; Net.SendToHost(Packet.Build(Msg.MapProgress, w => w.Write(_tufDl.Progress))); }
+            else Net.SendToHost(Packet.Build(Msg.MapNeed, w => { w.Write(MapHash); w.Write(DlReceived); }));
+        }
+        public static void DlCancel()
+        {
+            DlCancelled = true;
+            if (_tufDl != null) { _tufDl.Cancelled = true; _tufDl = null; }
+            CloseDownload(true);
+            Net.SendToHost(Packet.Build(Msg.MapCancel));
+        }
         public static void DlRetry() { DlCancelled = false; StartDownload(); }
 
         public static void ToggleReady()
@@ -213,6 +304,29 @@ namespace ADOFAIMulti
             if (Phase != Phase.WaitingStart) return;
             MyReady = !MyReady;
             Net.SendToHost(Packet.Build(Msg.Ready, w => w.Write(MyReady)));
+        }
+
+        /// <summary>멤버: TUF CDN에서 직접 받기. 실패하면 방장에게서 받기로 전환</summary>
+        static void StartTufDownload()
+        {
+            CloseDownload(true);
+            Directory.CreateDirectory(MapPack.Root);
+            DlReceived = 0; DlPaused = false; DlActive = true;
+            var hash = MapHash;
+            _tufDl = new FileDownload(MapDlUrl, MapPack.PartPath(hash));
+            Runner.Instance.StartCoroutine(_tufDl.Run(d =>
+            {
+                if (d != _tufDl || hash != MapHash) return;
+                _tufDl = null;
+                if (d.Done) { DlReceived = MapSize; FinishDownload(); }
+                else if (!d.Cancelled)
+                {
+                    Main.Log("TUF download failed, falling back to host: " + d.Error);
+                    Notice = "TUF에서 받지 못해서 방장에게서 받는 중...";
+                    StartDownload();
+                }
+            }));
+            Net.SendToHost(Packet.Build(Msg.MapProgress, w => w.Write(0f)));
         }
 
         static void StartDownload()
@@ -227,6 +341,7 @@ namespace ADOFAIMulti
         static void CloseDownload(bool delete)
         {
             DlActive = false;
+            if (delete && _tufDl != null) { _tufDl.Cancelled = true; _tufDl = null; }
             if (_dlStream != null) { _dlStream.Dispose(); _dlStream = null; }
             if (delete && MapHash != null) { try { File.Delete(MapPack.PartPath(MapHash)); } catch { } }
         }
@@ -242,6 +357,7 @@ namespace ADOFAIMulti
             {
                 if (hash != MapHash) return;
                 if (!ok) { Notice = "맵 파일이 손상됐습니다. 다시 받아주세요"; DlCancelled = true; Net.SendToHost(Packet.Build(Msg.MapCancel)); return; }
+                if (!MapPack.Has(hash, MapRel)) { var rel = MapPack.FindLevelFile(MapPack.MapDir(hash)); if (rel != null) MapRel = rel; }
                 Notice = "맵 준비 완료";
                 Net.SendToHost(Packet.Build(Msg.MapHave, w => w.Write(hash)));
             });
@@ -256,6 +372,19 @@ namespace ADOFAIMulti
             if (!Game.IsScnGame && !Island.InIsland && !Island.Busy && Phase != Phase.Loading) Island.Enter();
             if (Game.InGame && Input.GetKeyDown(KeyCode.Q) && Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.LeftShift)) Forfeit();
             if (Net.IsHost) HostTick();
+
+            // TUF 직접 다운로드 진행률을 방장에게 보고
+            if (_tufDl != null && _tufDl.Running)
+            {
+                DlReceived = _tufDl.Received;
+                if (_tufDl.Total > 0) MapSize = _tufDl.Total;
+                if (!DlPaused && Time.realtimeSinceStartup >= _nextTufReport)
+                {
+                    _nextTufReport = Time.realtimeSinceStartup + 0.3f;
+                    float pr = _tufDl.Progress;
+                    Net.SendToHost(Packet.Build(Msg.MapProgress, w => w.Write(pr)));
+                }
+            }
 
             switch (Phase)
             {
@@ -354,6 +483,9 @@ namespace ADOFAIMulti
                     break;
                 }
                 case Msg.MapPause: if (e != null) e.State = PState.Paused; break;
+                case Msg.MapProgress:
+                    if (e != null && e.State != PState.HasMap && e.State != PState.Cancelled) { e.State = PState.Downloading; e.Download = r.ReadSingle(); }
+                    break;
                 case Msg.MapCancel: if (e != null) { e.State = PState.Cancelled; e.Download = 0; } break;
                 case Msg.MapHave:
                     if (e != null && r.ReadString() == MapHash) { e.State = PState.HasMap; e.Download = 1; }
@@ -378,11 +510,14 @@ namespace ADOFAIMulti
                 case Msg.Reject: Notice = r.ReadString(); LeaveRoom(); break;
                 case Msg.MapOffer:
                     MapHash = r.ReadString(); MapSize = r.ReadInt64(); MapRel = r.ReadString(); MapTitle = r.ReadString(); MapSong = r.ReadString(); MapArtist = r.ReadString(); MapAuthor = r.ReadString();
+                    MapSource = r.ReadByte(); MapTufId = r.ReadInt32(); MapDlUrl = r.ReadString(); MapDiff = r.ReadString();
+                    { ColorUtility.TryParseHtmlString("#" + r.ReadString(), out var dc); MapDiffColor = dc; }
                     ResetMatch();
                     if (Net.IsHost) break;
                     Phase = Phase.Distributing;
                     DlCancelled = false;
                     if (MapPack.Has(MapHash, MapRel)) { Notice = "이미 받은 맵입니다"; Net.SendToHost(Packet.Build(Msg.MapHave, w => w.Write(MapHash))); }
+                    else if (MapSource == 1 && !string.IsNullOrEmpty(MapDlUrl)) { Notice = $"TUF에서 받는 중: {MapTitle}"; StartTufDownload(); }
                     else { Notice = $"맵 받는 중: {MapTitle}"; StartDownload(); }
                     break;
                 case Msg.MapChunk:

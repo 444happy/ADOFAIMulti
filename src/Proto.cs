@@ -24,6 +24,7 @@ namespace ADOFAIMulti
         Board,          // H->C  List<Entry>
         Results,        // H->C  List<Entry>
         BackToLobby,    // H->C
+        MapProgress,    // C->H  float (TUF에서 직접 받는 중 진행률)
     }
 
     public enum PState : byte { Lobby, Downloading, Paused, Cancelled, HasMap, Loading, Loaded, Ready, Playing, Finished }

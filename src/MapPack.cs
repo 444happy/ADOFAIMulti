@@ -77,17 +77,61 @@ namespace ADOFAIMulti
 
         public static string LevelPath(string hash, string relLevelFile) => Path.Combine(MapDir(hash), relLevelFile);
 
+        public static bool IsTuf(string hash) => hash != null && hash.StartsWith("tuf");
+
         public static Task<bool> ExtractAsync(string hash)
         {
             return Task.Run(() =>
             {
                 var part = PartPath(hash);
                 var dir = MapDir(hash);
-                if (Directory.Exists(dir)) Directory.Delete(dir, true);
-                ZipFile.ExtractToDirectory(part, dir);
+                SafeExtract(part, dir);
                 File.Delete(part);
-                return HashFolder(dir) == hash; // 받은 내용 검증
+                // 방장이 직접 묶은 맵은 내용 해시로 검증, TUF 맵은 .adofai 가 있는지만 확인
+                return IsTuf(hash) ? FindLevelFile(dir) != null : HashFolder(dir) == hash;
             });
+        }
+
+        /// <summary>
+        /// zip 풀기. 이름에 쓸 수 없는 문자가 섞인 항목(다른 언어 인코딩 등)도 치환해서 풀고,
+        /// 폴더 밖으로 나가는 경로(../)는 막는다.
+        /// </summary>
+        public static void SafeExtract(string zipPath, string dir)
+        {
+            if (Directory.Exists(dir)) Directory.Delete(dir, true);
+            Directory.CreateDirectory(dir);
+            string root = Path.GetFullPath(dir) + Path.DirectorySeparatorChar;
+            var bad = Path.GetInvalidFileNameChars();
+            using (var zip = ZipFile.OpenRead(zipPath))
+            {
+                foreach (var e in zip.Entries)
+                {
+                    var parts = e.FullName.Replace('\\', '/').Split('/')
+                        .Where(p => p.Length > 0 && p != "." && p != "..")
+                        .Select(p => new string(p.Select(ch => bad.Contains(ch) ? '_' : ch).ToArray()).Trim())
+                        .Where(p => p.Length > 0).ToArray();
+                    if (parts.Length == 0) continue;
+                    var target = Path.GetFullPath(Path.Combine(dir, Path.Combine(parts)));
+                    if (!target.StartsWith(root, StringComparison.OrdinalIgnoreCase)) continue;
+                    if (e.FullName.EndsWith("/") || e.FullName.EndsWith("\\")) { Directory.CreateDirectory(target); continue; }
+                    Directory.CreateDirectory(Path.GetDirectoryName(target));
+                    using (var src = e.Open())
+                    using (var dst = File.Create(target)) src.CopyTo(dst);
+                }
+            }
+        }
+
+        /// <summary>폴더 안의 실제 레벨 파일 (backup 제외, 얕은 경로 우선, 같으면 큰 파일). dir 기준 상대경로</summary>
+        public static string FindLevelFile(string dir)
+        {
+            if (!Directory.Exists(dir)) return null;
+            var best = Directory.GetFiles(dir, "*.adofai", SearchOption.AllDirectories)
+                .Where(f => Path.GetFileName(f).IndexOf("backup", StringComparison.OrdinalIgnoreCase) < 0)
+                .OrderBy(f => f.Substring(dir.Length).Count(c => c == Path.DirectorySeparatorChar || c == '/'))
+                .ThenByDescending(f => new FileInfo(f).Length)
+                .FirstOrDefault();
+            if (best == null) return null;
+            return best.Substring(Path.GetFullPath(dir).TrimEnd('\\', '/').Length).TrimStart('\\', '/');
         }
     }
 }

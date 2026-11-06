@@ -544,16 +544,23 @@ namespace ADOFAIMulti
                 GUI.Label(new Rect(hero.x + 28, hero.y + 50, hero.width - 56, 50), Trim(song, 40), S_title);
                 string meta = string.Join("   ·   ", new[] { Trim(Session.MapArtist, 30), string.IsNullOrEmpty(Session.MapAuthor) ? "" : "제작 " + Trim(Session.MapAuthor, 24), $"{Session.MapSize / 1048576f:0.0}MB" }.Where(x => !string.IsNullOrEmpty(x)).ToArray());
                 GUI.Label(new Rect(hero.x + 28, hero.y + 104, hero.width - 56, 24), meta, Label(16, C_sub));
+                if (Session.MapSource == 1)
+                {
+                    float px = hero.xMax - 28;
+                    if (!string.IsNullOrEmpty(Session.MapDiff)) { float w = 22 + Label(12, C_txt, FontStyle.Bold).CalcSize(new GUIContent(Session.MapDiff)).x; px -= w; Pill(new Rect(px, hero.y + 20, w, 24), Esc(Session.MapDiff), Session.MapDiffColor); px -= 8; }
+                    string tag = "TUF #" + Session.MapTufId; float tw = 22 + Label(12, C_txt, FontStyle.Bold).CalcSize(new GUIContent(tag)).x; px -= tw;
+                    Pill(new Rect(px, hero.y + 20, tw, 24), tag, C_acc);
+                }
                 // 모두 맵 받은 비율
                 var parts = Session.Board.Where(x => x.State != PState.Cancelled).ToList();
                 int have = parts.Count(x => x.State >= PState.HasMap);
                 if (Session.Phase == Phase.Distributing || Session.Phase == Phase.Packing)
                 {
-                    float avg = parts.Count == 0 ? 0 : parts.Average(x => x.State >= PState.HasMap ? 1f : x.Download);
+                    float avg = Session.Phase == Phase.Packing ? Mathf.Max(0, Session.HostFetchProgress) : parts.Count == 0 ? 0 : parts.Average(x => x.State >= PState.HasMap ? 1f : x.Download);
                     var br = new Rect(hero.x + 28, hero.yMax - 50, hero.width - 56, 8);
                     Fill(br, C_line);
                     GUI.DrawTexture(new Rect(br.x, br.y, br.width * avg, br.height), T_accBar);
-                    GUI.Label(new Rect(br.x, br.y - 28, br.width, 22), Session.Phase == Phase.Packing ? "맵 압축 중..." : $"{have}/{parts.Count}명 받음", Label(13, C_sub, FontStyle.Bold));
+                    GUI.Label(new Rect(br.x, br.y - 28, br.width, 22), Session.Phase == Phase.Packing ? (Session.HostFetchProgress >= 0 ? $"방장이 TUF에서 받는 중 {Session.HostFetchProgress * 100:0}%" : "맵 준비 중...") : $"{have}/{parts.Count}명 받음", Label(13, C_sub, FontStyle.Bold));
                 }
             }
 
@@ -584,10 +591,10 @@ namespace ADOFAIMulti
                 GUILayout.BeginHorizontal();
                 if (Session.MapHash != null && !string.IsNullOrEmpty(Session.HostLevelPath))
                 {
-                    if (GUILayout.Button("이 맵으로 한 판 더", S_cta)) Session.HostDistribute(Session.HostLevelPath);
-                    if (GUILayout.Button("다른 맵 고르기", S_ctaGhost, GUILayout.Width(220))) { _drawer = true; MapBrowser.ScanOnce(); }
+                    if (GUILayout.Button("이 맵으로 한 판 더", S_cta)) Session.HostRedo();
+                    if (GUILayout.Button("다른 맵 고르기", S_ctaGhost, GUILayout.Width(220))) { _drawer = true; _drawerTab = 1; }
                 }
-                else if (GUILayout.Button("맵 고르기", S_cta)) { _drawer = true; MapBrowser.ScanOnce(); }
+                else if (GUILayout.Button("맵 고르기", S_cta)) { _drawer = true; _drawerTab = 1; }
                 GUILayout.EndHorizontal();
             }
             else if (ph == Phase.Packing || ph == Phase.Distributing)
@@ -599,7 +606,7 @@ namespace ADOFAIMulti
                 GUI.enabled = ph == Phase.Distributing;
                 if (GUILayout.Button("받은 사람끼리 시작", S_ctaGhost)) Session.HostStartLoad();
                 GUI.enabled = true;
-                if (GUILayout.Button("다른 맵 고르기", S_ctaGhost, GUILayout.Width(220))) { _drawer = true; MapBrowser.ScanOnce(); }
+                if (GUILayout.Button("다른 맵 고르기", S_ctaGhost, GUILayout.Width(220))) { _drawer = true; _drawerTab = 1; }
                 GUILayout.EndHorizontal();
             }
             else
@@ -698,8 +705,8 @@ namespace ADOFAIMulti
             GUILayout.BeginHorizontal();
             if (Net.IsHost)
             {
-                if (!string.IsNullOrEmpty(Session.HostLevelPath) && GUILayout.Button("같은 맵으로 한 판 더", S_cta)) { Session.HostBackToLobby(); Session.HostDistribute(Session.HostLevelPath); }
-                if (GUILayout.Button("다른 맵 고르기", S_ctaGhost, GUILayout.Width(220))) { Session.HostBackToLobby(); _drawer = true; MapBrowser.ScanOnce(); }
+                if (!string.IsNullOrEmpty(Session.HostLevelPath) && GUILayout.Button("같은 맵으로 한 판 더", S_cta)) { Session.HostBackToLobby(); Session.HostRedo(); }
+                if (GUILayout.Button("다른 맵 고르기", S_ctaGhost, GUILayout.Width(220))) { Session.HostBackToLobby(); _drawer = true; _drawerTab = 1; }
             }
             else
             {
@@ -732,29 +739,109 @@ namespace ADOFAIMulti
         }
 
         // ---------------- 맵 서랍 (방장) ----------------
+        static int _drawerTab;                       // 0 = 내 컴퓨터, 1 = TUF
+        static string _tufQuery = "", _tufSent = null;
+        static float _tufTypedAt;
+        static Tuf.Level _tufSel;
+        static Vector2 _sTuf;
+
         static void DrawMapDrawer(float W, float H)
         {
             GUI.DrawTexture(new Rect(0, 0, W, H), T_dim);
-            if (Event.current.type == EventType.MouseDown && Event.current.mousePosition.x < W - 600) { _drawer = false; Event.current.Use(); return; }
-            var r = new Rect(W - 600, 0, 600, H);
+            float dw = Mathf.Min(680, W * 0.55f);
+            if (Event.current.type == EventType.MouseDown && Event.current.mousePosition.x < W - dw) { _drawer = false; Event.current.Use(); return; }
+            var r = new Rect(W - dw, 0, dw, H);
             Fill(r, A(C_side, 0.98f));
             Fill(new Rect(r.x, 0, 1, H), C_line);
             GUILayout.BeginArea(new Rect(r.x + 28, 28, r.width - 56, H - 56));
             GUILayout.BeginHorizontal();
             GUILayout.Label("맵 고르기", Label(26, C_txt, FontStyle.Bold));
             GUILayout.FlexibleSpace();
-            if (GUILayout.Button(MapBrowser.Scanning ? "찾는 중..." : "새로고침", S_iconBtn, GUILayout.Width(110))) MapBrowser.Rescan();
             if (GUILayout.Button("닫기", S_iconBtn, GUILayout.Width(80))) _drawer = false;
             GUILayout.EndHorizontal();
-            GUILayout.Label("워크샵 · 게임 폴더 · 문서 · 다운로드에서 찾은 맵", S_sub);
+            GUILayout.Space(6);
+
+            // 탭
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("TUF에서 찾기", _drawerTab == 1 ? S_rowOn : S_row, GUILayout.Width(170))) _drawerTab = 1;
+            if (GUILayout.Button("내 컴퓨터", _drawerTab == 0 ? S_rowOn : S_row, GUILayout.Width(140))) { _drawerTab = 0; MapBrowser.ScanOnce(); }
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
             GUILayout.Space(8);
-            GUI.SetNextControlName("mapSearch");
-            _search = GUILayout.TextField(_search, S_field);
-            if (_search.Length == 0 && Event.current.type == EventType.Repaint)
+
+            bool busy = Session.Phase == Phase.Packing || (Session.InMatch && Session.Phase != Phase.Results);
+            if (_drawerTab == 1) DrawTufTab(busy); else DrawLocalTab(busy);
+            GUILayout.EndArea();
+        }
+
+        static void SearchField(ref string value, string placeholder)
+        {
+            value = GUILayout.TextField(value, S_field);
+            if (value.Length == 0 && Event.current.type == EventType.Repaint)
             {
                 var lr = GUILayoutUtility.GetLastRect();
-                GUI.Label(new Rect(lr.x + 16, lr.y, lr.width, lr.height), "곡명 · 아티스트 · 제작자 검색", Label(15, A(C_sub, 0.6f)));
+                GUI.Label(new Rect(lr.x + 16, lr.y, lr.width, lr.height), placeholder, Label(15, A(C_sub, 0.6f)));
             }
+        }
+
+        static void DrawTufTab(bool busy)
+        {
+            var before = _tufQuery;
+            SearchField(ref _tufQuery, "곡명 · 아티스트 · 제작자로 TUF 검색");
+            if (_tufQuery != before) _tufTypedAt = Time.unscaledTime;
+            // 입력이 멈추고 0.4초 뒤 검색 (첫 진입 시 최신 레벨)
+            if (_tufSent == null || (_tufQuery != _tufSent && Time.unscaledTime - _tufTypedAt > 0.4f))
+            {
+                _tufSent = _tufQuery; _tufSel = null; _sTuf = Vector2.zero;
+                if (Runner.Instance != null) Tuf.Search(Runner.Instance, _tufQuery);
+            }
+            GUILayout.Label(Tuf.Loading && Tuf.Results.Count == 0 ? "검색 중..." : !string.IsNullOrEmpty(Tuf.Error) ? Tuf.Error : $"{Tuf.Total:N0}개 레벨   ·   The Universal Forums", S_small);
+            GUILayout.Space(4);
+
+            _sTuf = GUILayout.BeginScrollView(_sTuf, GUILayout.ExpandHeight(true));
+            foreach (var lv in Tuf.Results)
+            {
+                bool sel = _tufSel == lv;
+                var rr = GUILayoutUtility.GetRect(100, 60, GUILayout.ExpandWidth(true));
+                if (GUI.Button(rr, "", sel ? S_rowOn : S_row)) _tufSel = lv;
+                float right = rr.xMax - 12;
+                if (!string.IsNullOrEmpty(lv.Diff))
+                {
+                    float w = 22 + Label(12, C_txt, FontStyle.Bold).CalcSize(new GUIContent(lv.Diff)).x;
+                    right -= w;
+                    Pill(new Rect(right, rr.y + 10, w, 22), Esc(lv.Diff), lv.DiffColor);
+                }
+                GUI.Label(new Rect(rr.x + 16, rr.y + 8, right - rr.x - 24, 24), Trim(lv.Song, 46), Label(16, sel ? C_acc : C_txt, FontStyle.Bold));
+                string sub = string.Join("  ·  ", new[] { Trim(lv.Artist, 26), string.IsNullOrEmpty(lv.Creator) ? "" : "제작 " + Trim(lv.Creator, 20), lv.Bpm > 0 ? $"{lv.Bpm:0} BPM" : "", lv.LengthText }.Where(x => !string.IsNullOrEmpty(x)).ToArray());
+                GUI.Label(new Rect(rr.x + 16, rr.y + 32, rr.width - 32, 20), sub + (lv.CanDownload ? "" : $"  <color=#{HexOf(C_fire)}>다운로드 링크 없음</color>"), S_small);
+            }
+            if (Tuf.HasMore)
+            {
+                GUILayout.Space(6);
+                GUI.enabled = !Tuf.Loading;
+                if (GUILayout.Button(Tuf.Loading ? "불러오는 중..." : "더 보기", S_btn) && Runner.Instance != null) Tuf.Search(Runner.Instance, _tufSent ?? "", true);
+                GUI.enabled = true;
+            }
+            GUILayout.EndScrollView();
+            GUILayout.Space(8);
+
+            if (_tufSel != null)
+                GUILayout.Label($"<b>{Trim(_tufSel.Song, 40)}</b>  <color=#{HexOf(C_sub)}>TUF #{_tufSel.Id}</color>", S_txt);
+            GUILayout.Label("모두가 TUF에서 직접 받아요 (실패하면 방장에게서 받아요). 받아둔 맵은 다시 받지 않아요.", S_small);
+            GUI.enabled = !busy && _tufSel != null && _tufSel.CanDownload;
+            if (GUILayout.Button("이 맵으로 시작", S_cta)) { _drawer = false; ShowResults = false; Session.HostDistributeTuf(_tufSel); }
+            GUI.enabled = true;
+        }
+
+        static void DrawLocalTab(bool busy)
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("워크샵 · 게임 폴더 · 문서 · 다운로드에서 찾은 맵", S_sub);
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button(MapBrowser.Scanning ? "찾는 중..." : "새로고침", S_iconBtn, GUILayout.Width(110))) MapBrowser.Rescan();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(6);
+            SearchField(ref _search, "곡명 · 아티스트 · 제작자 검색");
             GUILayout.Space(6);
             _sMaps = GUILayout.BeginScrollView(_sMaps, GUILayout.ExpandHeight(true));
             var q = _search.Trim();
@@ -779,14 +866,11 @@ namespace ADOFAIMulti
             if (GUILayout.Button("최근 맵", S_iconBtn, GUILayout.Width(90))) _mapPath = Game.DefaultLevelPath();
             GUILayout.EndHorizontal();
             GUILayout.Space(6);
-            bool busy = Session.Phase == Phase.Packing || (Session.InMatch && Session.Phase != Phase.Results);
             GUI.enabled = !busy && !string.IsNullOrEmpty(_mapPath);
             if (GUILayout.Button("이 맵으로 시작", S_cta)) { _drawer = false; ShowResults = false; Session.HostDistribute(_mapPath.Trim().Trim('"')); }
             GUI.enabled = true;
-            GUILayout.EndArea();
         }
 
-        // ---------------- 설정 팝오버 ----------------
         // ---- 커스텀 테마 편집 상태 ----
         static int _editIdx;                    // 0 배경 1 카드 2 글자 3 강조 4 강조2
         static string _hexEdit = "";
