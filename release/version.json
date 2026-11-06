@@ -1,7 +1,7 @@
 {
-  "Version": "0.8.0",
+  "Version": "0.8.1",
   "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
   "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
-  "Sha256": "24e890cb2f12c3e4f5aa1c16649aa2cc1f7206a979c15645d93bc00eeb093ef5",
-  "Notes": "메인 섬 멀티 포탈로 입장"
+  "Sha256": "f9bb58b0ad62ea509a5ad5fccd11b2cbdcb50c86519cd5a648a6edd5553b6bb2",
+  "Notes": "섬에서 나올 때 행성 잔상 제거"
 }

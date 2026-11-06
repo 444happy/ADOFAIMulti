@@ -80,7 +80,10 @@ namespace ADOFAIMulti
         {
             if (_camGo != null) UnityEngine.Object.Destroy(_camGo);
             _camGo = null;
+            var shown = new List<GameObject>(_hidden);
             foreach (var go in _hidden) if (go != null) go.SetActive(true);
+            ClearFx(shown);
+            _runner.StartCoroutine(ClearFxFrames(shown));
             foreach (var a in _audio)
             {
                 if (a.src == null || a.src.clip == null) continue;
@@ -88,6 +91,25 @@ namespace ADOFAIMulti
             }
             _hidden.Clear(); _audio.Clear();
             InIsland = false;
+        }
+
+        /// <summary>
+        /// 다시 켠 메뉴의 파티클·트레일 비우기. 꺼져 있던 동안의 이동을 한꺼번에 이어 그려서
+        /// 행성 주변에 원 모양 잔상이 남기 때문 (켠 직후 몇 프레임은 다시 쌓이므로 여러 번 호출)
+        /// </summary>
+        static void ClearFx(List<GameObject> roots)
+        {
+            foreach (var go in roots)
+            {
+                if (go == null) continue;
+                foreach (var ps in go.GetComponentsInChildren<ParticleSystem>(true)) { try { ps.Clear(true); } catch { } }
+                foreach (var tr in go.GetComponentsInChildren<TrailRenderer>(true)) { try { tr.Clear(); } catch { } }
+            }
+        }
+
+        static IEnumerator ClearFxFrames(List<GameObject> roots)
+        {
+            for (int k = 0; k < 4; k++) { ClearFx(roots); yield return null; }
         }
 
         /// <summary>모드를 끌 때 등: 즉시 메뉴 복구</summary>
