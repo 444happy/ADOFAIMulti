@@ -1,7 +1,7 @@
 {
-  "Version": "0.10.1",
+  "Version": "0.10.2",
   "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
   "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
-  "Sha256": "1fe72a995b6ae05b5c74a022eaf1f49bf5a32ddda42767dde9396d3b961250b7",
-  "Notes": "시작 화면에서 포탈 숨김, 구버전 이용 차단, 메뉴 업데이트 문구 제거"
+  "Sha256": "74d8bd0b521b2f7a71d339d2d56d7dd44532d5ce736e1f04f387a5ac63c402f7",
+  "Notes": "시작 화면 포탈 완전히 숨김"
 }

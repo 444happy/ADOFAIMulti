@@ -23,8 +23,8 @@ namespace ADOFAIMulti
         static int _sceneHandle = -1;
         static float _sceneSeenAt;
         // 시작 화면(정가운데) 판정: 포탈을 만들 때의 카메라 위치 = 메뉴 시작 지점
-        static Vector2 _centerCam; static float _unit = 1f;
-        static Renderer[] _renderers; static Collider2D[] _colliders;
+        static Vector2 _spawn; static float _unit = 1f;
+        static readonly HashSet<Renderer> _offByUs = new HashSet<Renderer>();
         public static bool Hidden;
 
         /// <summary>Runner.Update에서 호출: 메인 섬이 새로 열릴 때마다 포탈을 한 번 만든다</summary>
@@ -114,13 +114,13 @@ namespace ADOFAIMulti
             fl.arguments = Arg;
             fl.isLandable = true;
             Floor = fl;
-            _renderers = go.GetComponentsInChildren<Renderer>(true).Where(x => x.enabled).ToArray();
-            _colliders = go.GetComponentsInChildren<Collider2D>(true);
             _unit = unit;
-            var cam = Cam();
-            _centerCam = cam != null ? (Vector2)cam.transform.position : Vector2.zero;
+            _offByUs.Clear();
+            // 시작 화면 중심: 메뉴의 원점 타일(타이틀 아래 3x3 가운데). 원점에 타일이 없으면 행성 위치.
+            // (레벨에서 나와 메뉴가 다른 곳에서 시작해도 기준이 흔들리지 않게 원점 우선)
+            _spawn = pos.Any(q => q.magnitude < unit * 0.5f) ? Vector2.zero : (PlayerPos() ?? (Vector2)bestParent.transform.position);
             Hidden = false;
-            UpdateVisibility();
+            UpdateVisibility(true);
             Main.Log($"Portal: placed at {best} (unit {unit:0.00}) next to {bestParent.name}");
         }
 
@@ -131,20 +131,43 @@ namespace ADOFAIMulti
             return cam != null ? cam : Camera.main;
         }
 
+        /// <summary>행성(현재 타일)의 위치. 못 구하면 카메라 위치</summary>
+        static Vector2? PlayerPos()
+        {
+            try
+            {
+                var f = ADOBase.controller?.currFloor;
+                if (f != null) return (Vector2)f.transform.position;
+            }
+            catch { }
+            var cam = Cam();
+            return cam != null ? (Vector2?)(Vector2)cam.transform.position : null;
+        }
+
         /// <summary>
         /// 메뉴 시작 화면(정가운데)에 있을 때는 포탈을 숨긴다 — 타이틀 로고 위에 겹쳐 보이기 때문.
-        /// 카메라가 시작 지점에서 2.5칸 넘게 벗어나면 다시 보인다.
+        /// 행성이 시작 타일에서 2.5칸 넘게 벗어나면 보인다.
+        /// 메뉴 등장 연출 중 게임이 렌더러를 나중에 켜기도 해서, 숨김 상태면 매 프레임 전부 다시 끈다.
         /// </summary>
-        static void UpdateVisibility()
+        static void UpdateVisibility(bool force = false)
         {
-            var cam = Cam();
-            if (cam == null || Floor == null) return;
-            bool hide = Vector2.Distance(cam.transform.position, _centerCam) < _unit * 2.5f;
-            // 게임이 타일 연출 중에 렌더러를 다시 켤 수 있어서, 숨김 상태면 매 프레임 확인
-            if (hide == Hidden && !(hide && _renderers != null && _renderers.Any(r => r != null && r.enabled))) return;
+            if (Floor == null) return;
+            var pos = PlayerPos();
+            bool hide = pos == null || Vector2.Distance(pos.Value, _spawn) < _unit * 2.5f;
+            var go = Floor.gameObject;
+            if (hide)
+            {
+                foreach (var r in go.GetComponentsInChildren<Renderer>(true))
+                    if (r.enabled) { r.enabled = false; _offByUs.Add(r); }
+                foreach (var c in go.GetComponentsInChildren<Collider2D>(true)) c.enabled = false;
+            }
+            else if (Hidden || force)
+            {
+                foreach (var r in _offByUs) if (r != null) r.enabled = true;
+                _offByUs.Clear();
+                foreach (var c in go.GetComponentsInChildren<Collider2D>(true)) c.enabled = true;
+            }
             Hidden = hide;
-            if (_renderers != null) foreach (var r in _renderers) if (r != null) r.enabled = !hide;
-            if (_colliders != null) foreach (var c in _colliders) if (c != null) c.enabled = !hide;
         }
 
         /// <summary>포탈의 화면 좌표 (라벨 그리기용). 안 보이면 false</summary>
