@@ -1,7 +1,7 @@
 {
-  "Version": "0.6.1",
+  "Version": "0.7.0",
   "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
   "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
-  "Sha256": "6149ed3b4450a9403bb486fce11029adc268d149eed6209379cbcb38712ac9ad",
-  "Notes": "섬 나갈 때 검은 화면 수정, 기본 테마를 중립 톤으로"
+  "Sha256": "f93fa230a031c4a65c699c2f5c2b89d82d2c1658c8045b6166806f25743b21d3",
+  "Notes": "테마: 모노/불과 얼음 + 커스텀 5색 편집"
 }

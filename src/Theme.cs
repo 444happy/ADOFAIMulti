@@ -4,55 +4,78 @@ using UnityEngine;
 
 namespace ADOFAIMulti
 {
-    /// <summary>UI 색 테마 프리셋 (설정 탭에서 변경, Mods/ADOFAIMulti/theme.txt 에 저장)</summary>
+    /// <summary>
+    /// UI 색 테마. 프리셋 2종(불과 얼음 / 모노) + 사용자가 색 5개를 고르는 커스텀.
+    /// 나머지 색(그라데이션, 테두리, 보조 글자 등)은 기본 5색에서 자동 계산한다.
+    /// 저장: Mods/ADOFAIMulti/theme.txt (선택한 테마 id), custom_theme.txt (커스텀 5색)
+    /// </summary>
     public class Theme
     {
         public string Id, Name;
-        public Color Bg, BgTop, Glow, Side, Card, CardHi, Field, Line, Acc, Acc2, AccText, Txt, Sub, Fire, Ice, Gold;
+        // 기본 5색 (커스텀에서 편집)
+        public Color Bg, Card, Txt, Acc, Acc2;
+        // 파생 색
+        public Color BgTop, Glow, Side, CardHi, Field, Line, AccText, Sub, Fire, Ice, Gold;
 
         static Color H(string h) { ColorUtility.TryParseHtmlString("#" + h, out var c); return c; }
+        static Color Mix(Color a, Color b, float t) { var c = Color.Lerp(a, b, t); c.a = 1; return c; }
+        static float Lum(Color c) => 0.2126f * c.r + 0.7152f * c.g + 0.0722f * c.b;
 
-        public static readonly Theme[] All =
+        /// <summary>기본 5색으로 테마 전체 색을 만든다</summary>
+        public static Theme FromBase(string id, string name, Color bg, Color card, Color txt, Color acc, Color acc2)
         {
-            // 기본: 누구나 무난한 중립 다크 + 차분한 파랑 (Steam/Discord 계열의 익숙한 톤)
-            new Theme { Id = "default", Name = "기본",
-                Bg = H("111318"), BgTop = H("181b22"), Glow = H("23324d"), Side = H("14161c"), Card = H("1c1f27"), CardHi = H("252a34"),
-                Field = H("15181e"), Line = H("2a2f3a"), Acc = H("6aa8ff"), Acc2 = H("8fc0ff"), AccText = H("0c1220"),
-                Txt = H("eceff4"), Sub = H("9aa3b2"), Fire = H("ff6a4d"), Ice = H("5ab8ff"), Gold = H("ffd36b") },
+            var t = new Theme { Id = id, Name = name };
+            t.ApplyBase(bg, card, txt, acc, acc2);
+            return t;
+        }
 
-            new Theme { Id = "mint", Name = "민트",
-                Bg = H("0a120f"), BgTop = H("0f1d18"), Glow = H("1d4d3b"), Side = H("0d1713"), Card = H("17231e"), CardHi = H("1f2f28"),
-                Field = H("111b17"), Line = H("25352e"), Acc = H("74e0b0"), Acc2 = H("4fc3c9"), AccText = H("06110c"),
-                Txt = H("e7f2ec"), Sub = H("88a196"), Fire = H("ff6a4d"), Ice = H("5ab8ff"), Gold = H("ffd36b") },
+        public void ApplyBase(Color bg, Color card, Color txt, Color acc, Color acc2)
+        {
+            bg.a = card.a = txt.a = acc.a = acc2.a = 1;
+            Bg = bg; Card = card; Txt = txt; Acc = acc; Acc2 = acc2;
+            bool dark = Lum(bg) < 0.5f;
+            var lift = dark ? Color.white : Color.black;
+            BgTop = Mix(bg, lift, 0.04f);
+            Side = Mix(bg, lift, 0.02f);
+            Glow = Mix(bg, acc, 0.28f);
+            CardHi = Mix(card, lift, 0.05f);
+            Field = Mix(card, dark ? Color.black : Color.white, 0.18f);
+            Line = Mix(card, txt, 0.10f);
+            Sub = Mix(txt, bg, 0.40f);
+            AccText = Lum(acc) > 0.55f ? Mix(bg, Color.black, 0.3f) : Color.white;
+            Fire = H("ff6a4d"); Ice = H("5ab8ff"); Gold = H("ffd36b");
+        }
 
-            new Theme { Id = "fireice", Name = "불과 얼음",
-                Bg = H("0b0d18"), BgTop = H("141833"), Glow = H("3a1f4a"), Side = H("0e1122"), Card = H("171b33"), CardHi = H("20264a"),
-                Field = H("11152a"), Line = H("272d52"), Acc = H("ff7a59"), Acc2 = H("5aa9ff"), AccText = H("ffffff"),
-                Txt = H("eef0ff"), Sub = H("9aa0c8"), Fire = H("ff6a4d"), Ice = H("5ab8ff"), Gold = H("ffd36b") },
+        public static readonly Theme FireIce = FromBase("fireice", "불과 얼음", H("0b0d18"), H("171b33"), H("eef0ff"), H("ff7a59"), H("5aa9ff"));
+        public static readonly Theme Mono = FromBase("mono", "모노", H("0d0d0f"), H("1b1b20"), H("f4f4f6"), H("f2f2f2"), H("b8b8c2"));
+        public static readonly Theme Custom = FromBase("custom", "커스텀", H("101418"), H("1c222a"), H("eceff4"), H("6aa8ff"), H("c58bff"));
 
-            new Theme { Id = "midnight", Name = "미드나잇",
-                Bg = H("0c0a14"), BgTop = H("17122a"), Glow = H("3b2470"), Side = H("100d1c"), Card = H("1a1630"), CardHi = H("241e42"),
-                Field = H("13102a"), Line = H("2c2650"), Acc = H("b69cff"), Acc2 = H("ff8fd0"), AccText = H("120c22"),
-                Txt = H("f1edff"), Sub = H("a29bc4"), Fire = H("ff6a8a"), Ice = H("7ab8ff"), Gold = H("ffd36b") },
+        public static readonly Theme[] All = { Mono, FireIce, Custom };
 
-            new Theme { Id = "mono", Name = "모노",
-                Bg = H("0d0d0f"), BgTop = H("17171b"), Glow = H("2a2a33"), Side = H("111114"), Card = H("1b1b20"), CardHi = H("25252c"),
-                Field = H("141418"), Line = H("2c2c34"), Acc = H("f2f2f2"), Acc2 = H("b8b8c2"), AccText = H("0d0d0f"),
-                Txt = H("f4f4f6"), Sub = H("9a9aa6"), Fire = H("ff6a4d"), Ice = H("5ab8ff"), Gold = H("ffd36b") },
-        };
+        /// <summary>기본값: 모노 (가장 무난한 중립 톤)</summary>
+        public static Theme Current = Mono;
+        /// <summary>커스텀 색이 바뀔 때마다 증가 → UI가 스타일을 다시 만든다</summary>
+        public static int Version;
 
-        public static Theme Current = All[0];
-        public static event Action Changed;
-
-        static string FilePath => Path.Combine(Main.Mod.Path, "theme.txt");
+        static string Dir => Main.Mod.Path;
+        static bool _dirty; static float _dirtyAt;
 
         public static void Load()
         {
             try
             {
-                if (!File.Exists(FilePath)) return;
-                var id = File.ReadAllText(FilePath).Trim();
-                foreach (var t in All) if (t.Id == id) Current = t;
+                var cf = Path.Combine(Dir, "custom_theme.txt");
+                if (File.Exists(cf))
+                {
+                    var p = File.ReadAllText(cf).Split(new[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (p.Length >= 5) Custom.ApplyBase(H(p[0]), H(p[1]), H(p[2]), H(p[3]), H(p[4]));
+                }
+                var tf = Path.Combine(Dir, "theme.txt");
+                if (File.Exists(tf))
+                {
+                    var id = File.ReadAllText(tf).Trim();
+                    foreach (var t in All) if (t.Id == id) Current = t;
+                }
             }
             catch { }
         }
@@ -61,8 +84,26 @@ namespace ADOFAIMulti
         {
             if (t == Current) return;
             Current = t;
-            try { File.WriteAllText(FilePath, t.Id); } catch { }
-            Changed?.Invoke();
+            Version++;
+            try { File.WriteAllText(Path.Combine(Dir, "theme.txt"), t.Id); } catch { }
+        }
+
+        /// <summary>커스텀 색 변경 (저장은 잠시 후 한 번에)</summary>
+        public static void EditCustom(Color bg, Color card, Color txt, Color acc, Color acc2)
+        {
+            Custom.ApplyBase(bg, card, txt, acc, acc2);
+            if (Current != Custom) Set(Custom);
+            Version++;
+            _dirty = true; _dirtyAt = Time.unscaledTime;
+        }
+
+        /// <summary>Runner.Update에서 호출: 슬라이더를 끄는 동안 매 프레임 파일을 쓰지 않도록 0.7초 뒤 저장</summary>
+        public static void SaveIfDirty()
+        {
+            if (!_dirty || Time.unscaledTime - _dirtyAt < 0.7f) return;
+            _dirty = false;
+            string Hx(Color c) => ColorUtility.ToHtmlStringRGB(c);
+            try { File.WriteAllText(Path.Combine(Dir, "custom_theme.txt"), $"{Hx(Custom.Bg)} {Hx(Custom.Card)} {Hx(Custom.Txt)} {Hx(Custom.Acc)} {Hx(Custom.Acc2)}"); } catch { }
         }
     }
 }

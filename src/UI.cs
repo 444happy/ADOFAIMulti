@@ -15,7 +15,9 @@ namespace ADOFAIMulti
 
         // ---- palette (현재 테마에서 복사) ----
         static Color C_bg, C_side, C_card, C_cardHi, C_line, C_acc, C_acc2, C_txt, C_sub, C_fire, C_ice, C_gold;
-        static Theme _built;
+        static int _builtVer = -1; static float _builtAt;
+        static readonly System.Collections.Generic.List<Texture2D> _owned = new System.Collections.Generic.List<Texture2D>();
+        static Texture2D Own(Texture2D t) { t.hideFlags = HideFlags.HideAndDontSave; _owned.Add(t); return t; }
 
         static Texture2D T_bg, T_side, T_card, T_cardHi, T_acc, T_line, T_fire, T_ice, T_white, T_circle, T_dim, T_chip, T_glow, T_grad, T_accBar, T_sideHi;
         static GUIStyle S_para, S_paraTxt, S_h1, S_h2, S_txt, S_sub, S_small, S_num, S_card, S_cardBtn, S_btn, S_btnAcc, S_side, S_sideOn, S_field, S_chip, S_big, S_row, S_rowOn, S_logo, S_section;
@@ -49,17 +51,17 @@ namespace ADOFAIMulti
                     }
                     t.SetPixel(x, y, new Color(fill.r, fill.g, fill.b, fill.a * a));
                 }
-            t.Apply(); t.hideFlags = HideFlags.HideAndDontSave;
-            return t;
+            t.Apply();
+            return Own(t);
         }
-        static Texture2D Solid(Color c) { var t = new Texture2D(1, 1); t.SetPixel(0, 0, c); t.Apply(); t.hideFlags = HideFlags.HideAndDontSave; return t; }
+        static Texture2D Solid(Color c) { var t = new Texture2D(1, 1); t.SetPixel(0, 0, c); t.Apply(); return Own(t); }
 
         // 세로 그라데이션 배경 / 원형 은은한 빛
         static Texture2D VGrad(Color top, Color bottom)
         {
             var t = new Texture2D(1, 64, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
             for (int y = 0; y < 64; y++) t.SetPixel(0, y, Color.Lerp(bottom, top, y / 63f));
-            t.Apply(); t.hideFlags = HideFlags.HideAndDontSave; return t;
+            t.Apply(); return Own(t);
         }
         static Texture2D Glow(Color c)
         {
@@ -70,13 +72,13 @@ namespace ADOFAIMulti
                     float a = Mathf.Clamp01(1 - d); a = a * a * 0.55f;
                     t.SetPixel(x, y, new Color(c.r, c.g, c.b, a));
                 }
-            t.Apply(); t.hideFlags = HideFlags.HideAndDontSave; return t;
+            t.Apply(); return Own(t);
         }
         static Texture2D HGrad(Color a, Color b)
         {
             var t = new Texture2D(64, 1, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
             for (int x = 0; x < 64; x++) t.SetPixel(x, 0, Color.Lerp(a, b, x / 63f));
-            t.Apply(); t.hideFlags = HideFlags.HideAndDontSave; return t;
+            t.Apply(); return Own(t);
         }
 
         static GUIStyle Box(Texture2D bg, int border, RectOffset pad)
@@ -110,8 +112,14 @@ namespace ADOFAIMulti
 
         static void Styles()
         {
-            if (S_h1 != null && _built == Theme.Current) return;
-            var th = Theme.Current; _built = th;
+            if (S_h1 != null && _builtVer == Theme.Version) return;
+            // 같은 프레임의 Layout/Repaint 사이에 텍스처가 바뀌지 않도록 Layout 이벤트에서만 다시 만든다
+            if (S_h1 != null && Event.current != null && Event.current.type != EventType.Layout) return;
+            // 커스텀 슬라이더를 끄는 동안 매 프레임 다시 만들지 않게 (최대 초당 ~12번)
+            if (S_h1 != null && Time.unscaledTime - _builtAt < 0.08f) return;
+            var th = Theme.Current; _builtVer = Theme.Version; _builtAt = Time.unscaledTime;
+            foreach (var old in _owned) if (old != null) Object.Destroy(old);
+            _owned.Clear(); _swatches.Clear(); _pillTex.Clear();
             _labelCache.Clear();
             C_bg = th.Bg; C_side = th.Side; C_card = th.Card; C_cardHi = th.CardHi; C_line = th.Line; C_acc = th.Acc; C_acc2 = th.Acc2;
             C_txt = th.Txt; C_sub = th.Sub; C_fire = th.Fire; C_ice = th.Ice; C_gold = th.Gold;
@@ -172,7 +180,7 @@ namespace ADOFAIMulti
         public static void Draw()
         {
             Styles();
-            if (S_cta == null) ExtraStyles();
+            if (S_cta == null || _extraVer != _builtVer) ExtraStyles();
             if (Island.InIsland) DrawIsland();
             else if (Game.IsScnGame) { if (Session.InRoom) DrawInGame(); }
             else if (!Island.Busy) DrawPortal();
@@ -181,11 +189,11 @@ namespace ADOFAIMulti
         }
 
         static GUIStyle S_cardMe, S_cta, S_ctaGhost, S_pill, S_title, S_stepOn, S_stepOff, S_empty, S_iconBtn;
-        static Theme _extraFor;
+        static int _extraVer = -1;
 
         static void ExtraStyles()
         {
-            _extraFor = Theme.Current;
+            _extraVer = _builtVer;
             S_cardMe = new GUIStyle(S_card); S_cardMe.normal.background = T_cardHi;
             S_cta = new GUIStyle(S_btnAcc) { fontSize = 19, fixedHeight = 58 };
             S_ctaGhost = new GUIStyle(S_btn) { fontSize = 17, fixedHeight = 58 };
@@ -257,7 +265,6 @@ namespace ADOFAIMulti
         // =====================================================================
         static void DrawIsland()
         {
-            if (_extraFor != Theme.Current) ExtraStyles();
             var e = Event.current;
             if (e.type == EventType.KeyDown && e.keyCode == KeyCode.Escape && !Island.Busy)
             {
@@ -758,10 +765,35 @@ namespace ADOFAIMulti
         }
 
         // ---------------- 설정 팝오버 ----------------
+        // ---- 커스텀 테마 편집 상태 ----
+        static int _editIdx;                    // 0 배경 1 카드 2 글자 3 강조 4 강조2
+        static string _hexEdit = "";
+        static int _hexFor = -1;
+        static readonly string[] EditNames = { "배경", "카드", "글자", "강조", "강조 2" };
+
+        static Color GetBase(Theme t, int i) => i == 0 ? t.Bg : i == 1 ? t.Card : i == 2 ? t.Txt : i == 3 ? t.Acc : t.Acc2;
+
+        static void SetBase(int i, Color c)
+        {
+            var t = Theme.Custom;
+            Color bg = t.Bg, card = t.Card, txt = t.Txt, acc = t.Acc, acc2 = t.Acc2;
+            switch (i) { case 0: bg = c; break; case 1: card = c; break; case 2: txt = c; break; case 3: acc = c; break; default: acc2 = c; break; }
+            Theme.EditCustom(bg, card, txt, acc, acc2);
+        }
+
+        static void CopyToCustom(Theme from)
+        {
+            Theme.EditCustom(from.Bg, from.Card, from.Txt, from.Acc, from.Acc2);
+            _hexFor = -1;
+        }
+
+        // ---------------- 설정 팝오버 ----------------
         static void DrawSettings(float W, float H)
         {
             GUI.DrawTexture(new Rect(0, 0, W, H), T_dim);
-            var r = new Rect(W - 28 - 680, 72, 680, 430);
+            bool custom = Theme.Current == Theme.Custom;
+            float ph = custom ? 640 : 420;
+            var r = new Rect(W - 28 - 640, 72, 640, Mathf.Min(ph, H - 100));
             if (Event.current.type == EventType.MouseDown && !r.Contains(Event.current.mousePosition)) { _settings = false; Event.current.Use(); return; }
             GUILayout.BeginArea(r, S_card);
             GUILayout.BeginHorizontal();
@@ -775,19 +807,17 @@ namespace ADOFAIMulti
             foreach (var th in Theme.All)
             {
                 bool on = th == Theme.Current;
-                var tr = GUILayoutUtility.GetRect(118, 70, GUILayout.Width(118), GUILayout.Height(70));
-                if (GUI.Button(tr, "", on ? S_rowOn : S_row)) Theme.Set(th);
+                var tr = GUILayoutUtility.GetRect(180, 74, GUILayout.Width(180), GUILayout.Height(74));
+                if (GUI.Button(tr, "", on ? S_rowOn : S_row)) { Theme.Set(th); _hexFor = -1; }
                 if (Event.current.type == EventType.Repaint)
-                {
-                    GUI.DrawTexture(new Rect(tr.x + 10, tr.y + 10, 22, 22), Swatch(th.Bg));
-                    GUI.DrawTexture(new Rect(tr.x + 36, tr.y + 10, 22, 22), Swatch(th.Card));
-                    GUI.DrawTexture(new Rect(tr.x + 62, tr.y + 10, 22, 22), Swatch(th.Acc));
-                    GUI.DrawTexture(new Rect(tr.x + 88, tr.y + 10, 22, 22), Swatch(th.Acc2));
-                }
-                GUI.Label(new Rect(tr.x + 10, tr.y + 40, tr.width - 14, 22), th.Name, Label(12, on ? C_acc : C_txt, on ? FontStyle.Bold : FontStyle.Normal));
-                GUILayout.Space(4);
+                    for (int k = 0; k < 5; k++)
+                        GUI.DrawTexture(new Rect(tr.x + 12 + k * 30, tr.y + 12, 24, 24), Swatch(GetBase(th, k)));
+                GUI.Label(new Rect(tr.x + 12, tr.y + 44, tr.width - 20, 22), th.Name, Label(13, on ? C_acc : C_txt, on ? FontStyle.Bold : FontStyle.Normal));
+                GUILayout.Space(6);
             }
             GUILayout.EndHorizontal();
+
+            if (custom) CustomEditor();
 
             Section("업데이트");
             GUILayout.Label($"현재 v{Main.Version}   ·   {Updater.StatusText}", S_para);
@@ -805,6 +835,62 @@ namespace ADOFAIMulti
             Section("단축키");
             GUILayout.Label("Ctrl + M  멀티 섬   ·   F5  준비   ·   Ctrl + Shift + Q  기권   ·   Esc  뒤로", S_para);
             GUILayout.EndArea();
+        }
+
+        static void CustomEditor()
+        {
+            var t = Theme.Custom;
+            GUILayout.Space(6);
+            // 편집할 색 고르기
+            GUILayout.BeginHorizontal();
+            for (int i = 0; i < 5; i++)
+            {
+                bool on = i == _editIdx;
+                var cr = GUILayoutUtility.GetRect(110, 64, GUILayout.Width(110), GUILayout.Height(64));
+                if (GUI.Button(cr, "", on ? S_rowOn : S_row)) { _editIdx = i; _hexFor = -1; }
+                if (Event.current.type == EventType.Repaint)
+                    GUI.DrawTexture(new Rect(cr.x + 10, cr.y + 10, cr.width - 20, 22), Swatch(GetBase(t, i)));
+                GUI.Label(new Rect(cr.x + 10, cr.y + 36, cr.width - 16, 20), EditNames[i], Label(12, on ? C_acc : C_sub, on ? FontStyle.Bold : FontStyle.Normal));
+                GUILayout.Space(2);
+            }
+            GUILayout.EndHorizontal();
+
+            var c = GetBase(t, _editIdx);
+            if (_hexFor != _editIdx) { _hexEdit = ColorUtility.ToHtmlStringRGB(c); _hexFor = _editIdx; }
+
+            // 색상/채도/밝기 슬라이더
+            Color.RGBToHSV(c, out float h, out float sat, out float v);
+            float nh = SliderRow("색상", h), ns = SliderRow("채도", sat), nv = SliderRow("밝기", v);
+            if (!Mathf.Approximately(nh, h) || !Mathf.Approximately(ns, sat) || !Mathf.Approximately(nv, v))
+            {
+                var nc = Color.HSVToRGB(nh, ns, nv);
+                SetBase(_editIdx, nc);
+                _hexEdit = ColorUtility.ToHtmlStringRGB(nc);
+            }
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("HEX  #", S_sub, GUILayout.Width(60));
+            var nhex = GUILayout.TextField(_hexEdit, 6, S_field, GUILayout.Width(140));
+            if (nhex != _hexEdit)
+            {
+                _hexEdit = nhex;
+                if (nhex.Length == 6 && ColorUtility.TryParseHtmlString("#" + nhex, out var parsed)) SetBase(_editIdx, parsed);
+            }
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button("모노에서 시작", S_iconBtn, GUILayout.Width(130))) CopyToCustom(Theme.Mono);
+            if (GUILayout.Button("불과 얼음에서 시작", S_iconBtn, GUILayout.Width(160))) CopyToCustom(Theme.FireIce);
+            GUILayout.EndHorizontal();
+            GUILayout.Label("나머지 색(테두리, 보조 글자, 빛 등)은 이 5색에서 자동으로 맞춰져요.", S_para);
+        }
+
+        static float SliderRow(string label, float value)
+        {
+            GUILayout.BeginHorizontal(GUILayout.Height(26));
+            GUILayout.Label(label, S_sub, GUILayout.Width(60));
+            float nv = GUILayout.HorizontalSlider(value, 0f, 1f, GUILayout.ExpandWidth(true));
+            GUILayout.Label(Mathf.RoundToInt(nv * 100) + "%", Label(12, C_sub, FontStyle.Normal, TextAnchor.MiddleRight), GUILayout.Width(48));
+            GUILayout.EndHorizontal();
+            return nv;
         }
 
         static void DrawConfirm()
