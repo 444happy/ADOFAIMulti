@@ -1,14 +1,15 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 using Steamworks;
 using Steamworks.Data;
+using UnityEngine.Networking;
 
 namespace ADOFAIMulti
 {
-    /// <summary>Steam 콜백이 어느 스레드에서 오든 메인 스레드에서 처리되도록 모아두는 큐</summary>
+    /// <summary>Steam 콜백 등 다른 스레드에서 온 일을 메인 스레드에서 처리하기 위한 큐</summary>
     public static class MainThread
     {
         static readonly Queue<Action> _q = new Queue<Action>();
@@ -24,184 +25,256 @@ namespace ADOFAIMulti
         }
     }
 
-    /// <summary>Steam 로비 + P2P (릴레이 경유, 포트포워딩 불필요)</summary>
+    /// <summary>
+    /// 연결 계층.
+    /// - 게임 데이터는 전부 중계 서버(방 코드)로 주고받는다 → Steam 오프라인이어도 됨, 포트포워딩 불필요.
+    /// - Steam이 온라인이면 "친구 초대"용으로만 Steam 로비를 하나 만들어 방 코드를 실어 보낸다.
+    ///   초대를 수락한 친구는 로비에서 방 코드를 읽어 중계 서버로 들어온다.
+    /// </summary>
     public static class Net
     {
-        const int Channel = 7;  // 다른 모드/게임과 겹치지 않게
+        // 중계 서버 주소: 시작할 때 GitHub release/relay.txt 에서 받아옴 (서버를 바꿔도 모드 업데이트 불필요)
+        public const string DefaultRelay = "wss://adofai-multi-relay.444happy.workers.dev";
+        public static string RelayUrl = DefaultRelay;
         const string LobbyKey = "adofaimulti";
+        const string CodeChars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";   // 헷갈리는 0/O/1/I 제외
 
-        public static Lobby? CurrentLobby;
-        public static bool IsHost => CurrentLobby.HasValue && HostId == MyId;
-        public static ulong MyId => SteamClient.IsValid ? SteamClient.SteamId.Value : 0;
-        public static string MyName => SteamClient.IsValid ? SteamClient.Name : "Me";
-        /// <summary>입장 시점의 방장 (Steam은 방장이 나가면 자동 위임하므로 고정해 둠)</summary>
-        public static ulong HostId;
         public static string Status = "";
+        public static string RoomCode;                 // 현재 방 코드 (방에 있을 때)
+        public static ulong MyId, HostId;
+        public static bool InRoom => _relay != null && _welcomed;
+        public static bool IsHost => InRoom && MyId == HostId;
+        public static readonly Dictionary<ulong, string> Members = new Dictionary<ulong, string>();
 
-        static byte[] _buf = new byte[1024 * 1024 + 1024];
-        static bool _inited, _creating;
-
-        public static void Init()
+        public static bool SteamOnline { get { try { return SteamClient.IsValid && SteamClient.IsLoggedOn; } catch { return false; } } }
+        public static string MyName
         {
-            if (_inited) return;
-            if (!SteamClient.IsValid) { Status = "Steam 연결 대기 중... (Steam으로 실행했는지 확인)"; return; }
-            Main.Log("Net.Init: Steam ready, user " + SteamClient.SteamId.Value);
-            _inited = true;
-            SteamNetworking.AllowP2PPacketRelay(true);
-            SteamNetworking.OnP2PSessionRequest += OnSessionRequest;
-            SteamFriends.OnGameLobbyJoinRequested += OnJoinRequested;
-            SteamMatchmaking.OnLobbyEntered += OnLobbyEntered;
-            SteamMatchmaking.OnLobbyMemberJoined += OnMemberJoined;
-            SteamMatchmaking.OnLobbyMemberLeave += OnMemberLeft;
-            SteamMatchmaking.OnLobbyMemberDisconnected += OnMemberLeft;
+            get
+            {
+                try { if (SteamClient.IsValid && !string.IsNullOrEmpty(SteamClient.Name)) return SteamClient.Name; } catch { }
+                return Environment.UserName;
+            }
+        }
 
-            // 게임이 꺼진 상태에서 초대 수락 → "+connect_lobby <id>" 로 실행됨
+        static RelayClient _relay;
+        static bool _welcomed, _hostMode, _steamHooked;
+        static Lobby? _inviteLobby;                    // 초대용 Steam 로비 (방장)
+        public static bool CanInvite => _inviteLobby.HasValue;
+
+        // ---------------- 시작/종료 ----------------
+        public static IEnumerator LoadRelayUrl()
+        {
+            using (var req = UnityWebRequest.Get(Updater.BaseUrl + "/relay.txt?t=" + DateTime.UtcNow.Ticks))
+            {
+                req.timeout = 10;
+                yield return req.SendWebRequest();
+                if (req.result == UnityWebRequest.Result.Success)
+                {
+                    var u = req.downloadHandler.text.Trim();
+                    if (u.StartsWith("ws")) { RelayUrl = u.TrimEnd('/'); Main.Log("Relay: " + RelayUrl); }
+                }
+            }
+        }
+
+        /// <summary>Steam 이벤트 연결 (Steam이 늦게 준비될 수 있어 1초마다 재시도)</summary>
+        static float _nextHookTry;
+        public static void RetryInit()
+        {
+            if (_steamHooked || UnityEngine.Time.unscaledTime < _nextHookTry) return;
+            _nextHookTry = UnityEngine.Time.unscaledTime + 1f;
+            bool valid; try { valid = SteamClient.IsValid; } catch { valid = false; }
+            if (!valid) return;
+            _steamHooked = true;
+            SteamFriends.OnGameLobbyJoinRequested += OnInviteAccepted;
+            Main.Log($"Net: Steam hooked (online={SteamOnline})");
+
+            // 게임이 꺼진 상태에서 초대 수락 → "+connect_lobby <id>"
             var args = Environment.GetCommandLineArgs();
             for (int i = 0; i < args.Length - 1; i++)
                 if (args[i] == "+connect_lobby" && ulong.TryParse(args[i + 1], out var id))
-                    Session.RequestJoin(id);
-        }
-
-        static float _nextInitTry;
-        /// <summary>모드가 Steam보다 먼저 켜질 수 있어서, 준비될 때까지 1초마다 다시 시도</summary>
-        public static void RetryInit()
-        {
-            if (_inited || UnityEngine.Time.unscaledTime < _nextInitTry) return;
-            _nextInitTry = UnityEngine.Time.unscaledTime + 1f;
-            Init();
+                    JoinViaSteamLobby(id);
         }
 
         public static void Shutdown()
         {
-            if (!_inited) return;
-            _inited = false;
-            SteamNetworking.OnP2PSessionRequest -= OnSessionRequest;
-            SteamFriends.OnGameLobbyJoinRequested -= OnJoinRequested;
-            SteamMatchmaking.OnLobbyEntered -= OnLobbyEntered;
-            SteamMatchmaking.OnLobbyMemberJoined -= OnMemberJoined;
-            SteamMatchmaking.OnLobbyMemberLeave -= OnMemberLeft;
-            SteamMatchmaking.OnLobbyMemberDisconnected -= OnMemberLeft;
             Leave();
+            if (_steamHooked) { try { SteamFriends.OnGameLobbyJoinRequested -= OnInviteAccepted; } catch { } }
+            _steamHooked = false;
         }
 
-        // ---------- Lobby ----------
-        public static async void CreateRoom(int maxMembers)
+        // ---------------- 방 만들기 / 참가 / 나가기 ----------------
+        static ulong NewId()
         {
-            Main.Log($"CreateRoom: steamValid={SteamClient.IsValid} inited={_inited}");
-            if (!_inited) Init();
-            if (!_inited) { Main.Log("CreateRoom: Steam not initialized → " + Status); return; }
-            if (_creating) return;
-            _creating = true;
-            Status = "방 만드는 중...";
-            Lobby? lobby = null;
-            try { lobby = await SteamMatchmaking.CreateLobbyAsync(maxMembers); }
-            catch (Exception ex) { Main.Log("CreateLobbyAsync exception: " + ex); }
-            _creating = false;
-            Main.Log("CreateRoom: result " + (lobby.HasValue ? lobby.Value.Id.Value.ToString() : "null"));
-            MainThread.Post(() =>
-            {
-                if (!lobby.HasValue) { Status = "방 만들기 실패 (Steam 연결을 확인해 주세요)"; return; }
-                var l = lobby.Value;
-                l.SetFriendsOnly();
-                l.SetJoinable(true);
-                l.SetData(LobbyKey, Main.Version);
-                CurrentLobby = l;
-                HostId = MyId;
-                Status = "방 생성 완료";
-                Session.OnRoomEntered(true);
-            });
+            var b = new byte[8]; new System.Random().NextBytes(b);
+            ulong v = BitConverter.ToUInt64(b, 0) & 0x7FFFFFFFFFFFFFFF;
+            return v == 0 ? 1 : v;
         }
 
-        public static async void Join(ulong lobbyId)
+        static string NewCode()
         {
-            Main.Log($"Join {lobbyId}: steamValid={SteamClient.IsValid} inited={_inited}");
-            if (!_inited) Init();
-            if (!_inited) { Main.Log("Join: Steam not initialized → " + Status); return; }
-            if (CurrentLobby.HasValue) Leave();
-            Status = "참가하는 중...";
-            Lobby? lobby = null;
-            try { lobby = await SteamMatchmaking.JoinLobbyAsync(lobbyId); }
-            catch (Exception ex) { Main.Log("JoinLobbyAsync exception: " + ex); }
-            Main.Log("Join: result " + (lobby.HasValue ? "ok" : "null"));
-            MainThread.Post(() => { if (!lobby.HasValue) Status = "참가 실패"; });
+            var r = new System.Random();
+            return new string(Enumerable.Range(0, 6).Select(_ => CodeChars[r.Next(CodeChars.Length)]).ToArray());
+        }
+
+        public static string NormalizeCode(string s) => new string((s ?? "").ToUpperInvariant().Where(char.IsLetterOrDigit).ToArray());
+        public static bool IsValidCode(string s) { var c = NormalizeCode(s); return c.Length >= 4 && c.Length <= 8; }
+
+        public static void CreateRoom()
+        {
+            if (_relay != null) return;
+            Connect(NewCode(), true);
+        }
+
+        public static void Join(string code)
+        {
+            if (_relay != null) Leave();
+            Connect(NormalizeCode(code), false);
+        }
+
+        static void Connect(string code, bool host)
+        {
+            MyId = NewId(); HostId = 0; Members.Clear(); _welcomed = false; _hostMode = host;
+            RoomCode = code;
+            Status = host ? "방 만드는 중..." : $"방 {code} 에 들어가는 중...";
+            string url = $"{RelayUrl}/room/{code}?id={MyId}&host={(host ? 1 : 0)}&v={Uri.EscapeDataString(Main.Version)}&name={Uri.EscapeDataString(MyName)}";
+            Main.Log($"Relay connect {(host ? "host" : "join")} {code}");
+            _relay = new RelayClient();
+            _relay.Connect(url);
         }
 
         public static void Leave()
         {
-            if (CurrentLobby.HasValue)
-            {
-                foreach (var m in CurrentLobby.Value.Members)
-                    if (m.Id.Value != MyId) SteamNetworking.CloseP2PSessionWithUser(m.Id);
-                CurrentLobby.Value.Leave();
-            }
-            CurrentLobby = null;
-            HostId = 0;
+            if (_inviteLobby.HasValue) { try { _inviteLobby.Value.Leave(); } catch { } _inviteLobby = null; }
+            if (_relay != null) { _relay.Close(); _relay = null; }
+            _welcomed = false; Members.Clear(); HostId = 0; RoomCode = null;
         }
 
+        // ---------------- Steam 초대 ----------------
         public static void InviteOverlay()
         {
-            if (CurrentLobby.HasValue) SteamFriends.OpenGameInviteOverlay(CurrentLobby.Value.Id);
+            if (_inviteLobby.HasValue) { try { SteamFriends.OpenGameInviteOverlay(_inviteLobby.Value.Id); } catch { } }
+            else Status = SteamOnline ? "초대 준비 중..." : "Steam 오프라인: 방 코드를 친구에게 알려주세요";
         }
 
-        public static IEnumerable<Friend> Members => CurrentLobby.HasValue ? CurrentLobby.Value.Members : Enumerable.Empty<Friend>();
-
-        static bool IsMember(ulong id) => Members.Any(m => m.Id.Value == id);
-
-        static void OnSessionRequest(SteamId id) => MainThread.Post(() =>
+        static async void CreateInviteLobby()
         {
-            if (IsMember(id.Value)) SteamNetworking.AcceptP2PSessionWithUser(id);
-        });
+            if (!SteamOnline || !IsHost) return;
+            try
+            {
+                Lobby? l = await SteamMatchmaking.CreateLobbyAsync(8);
+                MainThread.Post(() =>
+                {
+                    if (!l.HasValue) return;
+                    if (!IsHost) { l.Value.Leave(); return; }     // 그 사이 방을 나갔으면 정리
+                    var lobby = l.Value;
+                    lobby.SetFriendsOnly(); lobby.SetJoinable(true);
+                    lobby.SetData(LobbyKey, RoomCode);
+                    _inviteLobby = lobby;
+                    Main.Log("Invite lobby ready " + lobby.Id.Value);
+                });
+            }
+            catch (Exception ex) { Main.Log("Invite lobby failed: " + ex.Message); }
+        }
 
-        static void OnJoinRequested(Lobby lobby, SteamId friend) => MainThread.Post(() => Session.RequestJoin(lobby.Id.Value));
+        static void OnInviteAccepted(Lobby lobby, SteamId friend) => MainThread.Post(() => JoinViaSteamLobby(lobby.Id.Value));
 
-        static void OnLobbyEntered(Lobby lobby) => MainThread.Post(() =>
+        static async void JoinViaSteamLobby(ulong lobbyId)
         {
-            if (lobby.IsOwnedBy(SteamClient.SteamId)) return; // 방장은 CreateRoom에서 처리
-            var ver = lobby.GetData(LobbyKey);
-            if (string.IsNullOrEmpty(ver)) { Status = "멀티 모드 방이 아닙니다"; lobby.Leave(); return; }
-            CurrentLobby = lobby;
-            HostId = lobby.Owner.Id.Value;
-            Status = "참가 완료";
-            Session.OnRoomEntered(false);
-        });
+            try
+            {
+                Lobby? l = await SteamMatchmaking.JoinLobbyAsync(lobbyId);
+                MainThread.Post(() =>
+                {
+                    if (!l.HasValue) { Status = "초대받은 방에 들어가지 못했어요"; return; }
+                    var code = l.Value.GetData(LobbyKey);
+                    l.Value.Leave();                               // 초대 로비는 코드 전달용일 뿐
+                    if (string.IsNullOrEmpty(code)) { Status = "멀티 모드 방이 아니에요"; return; }
+                    Session.RequestJoin(code);
+                });
+            }
+            catch (Exception ex) { Main.Log("JoinViaSteamLobby: " + ex.Message); }
+        }
 
-        static void OnMemberJoined(Lobby lobby, Friend f) => MainThread.Post(() => Session.OnMemberJoined(f.Id.Value, f.Name));
-
-        static void OnMemberLeft(Lobby lobby, Friend f) => MainThread.Post(() =>
-        {
-            SteamNetworking.CloseP2PSessionWithUser(f.Id);
-            Session.OnMemberLeft(f.Id.Value);
-        });
-
-        // ---------- P2P ----------
+        // ---------------- 송수신 ----------------
         public static void Send(ulong to, byte[] data)
         {
-            if (to == MyId) { Session.Handle(MyId, data); return; } // 방장 자신은 루프백
-            SteamNetworking.SendP2PPacket(to, data, data.Length, Channel, P2PSend.Reliable);
+            if (to == MyId) { Session.Handle(MyId, data); return; }   // 방장 자신은 루프백
+            _relay?.Send(to, data);
         }
 
         public static void SendToHost(byte[] data) => Send(HostId, data);
 
         public static void Broadcast(byte[] data)
         {
-            foreach (var m in Members.ToList()) Send(m.Id.Value, data);
+            _relay?.Send(0, data);
+            Session.Handle(MyId, data);
         }
 
+        static float _nextPing;
         public static void Poll()
         {
-            if (!_inited || !CurrentLobby.HasValue) return;
-            uint size = 0;
+            var r = _relay;
+            if (r == null) return;
+            if (r.Open && UnityEngine.Time.unscaledTime > _nextPing) { _nextPing = UnityEngine.Time.unscaledTime + 25f; r.SendText("ping"); }
             int guard = 0;
-            while (SteamNetworking.IsP2PPacketAvailable(out size, Channel) && guard++ < 256)
+            while (guard++ < 512 && r.TryDequeue(out var m))
             {
-                if (size > _buf.Length) _buf = new byte[size];
-                SteamId from = default;
-                if (!SteamNetworking.ReadP2PPacket(_buf, ref size, ref from, Channel)) break;
-                if (!IsMember(from.Value)) continue;
-                var data = new byte[size];
-                Buffer.BlockCopy(_buf, 0, data, 0, (int)size);
-                Session.Handle(from.Value, data);
+                if (r != _relay) return;   // 처리 중 방을 나감
+                if (m.Closed) { OnClosed(m.Error); return; }
+                if (m.IsText) OnControl(m.Text);
+                else if (_welcomed && Members.ContainsKey(m.From)) Session.Handle(m.From, m.Data);
             }
+        }
+
+        static void OnControl(string text)
+        {
+            JObject j;
+            try { j = JObject.Parse(text); } catch { return; }
+            string t = (string)j["t"];
+            switch (t)
+            {
+                case "welcome":
+                    Members.Clear();
+                    foreach (var mm in (JArray)j["members"])
+                    {
+                        ulong id = ulong.Parse((string)mm["id"]);
+                        Members[id] = (string)mm["name"];
+                        if ((bool)mm["host"]) HostId = id;
+                    }
+                    _welcomed = true;
+                    Status = _hostMode ? "방을 만들었어요" : "방에 들어왔어요";
+                    Session.OnRoomEntered(_hostMode);
+                    if (_hostMode) CreateInviteLobby();
+                    break;
+                case "joined":
+                {
+                    ulong id = ulong.Parse((string)j["id"]);
+                    Members[id] = (string)j["name"];
+                    Session.OnMemberJoined(id, (string)j["name"]);
+                    break;
+                }
+                case "left":
+                {
+                    ulong id = ulong.Parse((string)j["id"]);
+                    Members.Remove(id);
+                    Session.OnMemberLeft(id);
+                    break;
+                }
+                case "error":
+                    Status = (string)j["msg"] ?? "접속 실패";
+                    Main.Log("Relay error: " + (string)j["code"]);
+                    if (Session.InRoom) Session.LeaveRoom(); else Leave();
+                    break;
+            }
+        }
+
+        static void OnClosed(string error)
+        {
+            bool was = _welcomed;
+            Main.Log("Relay closed: " + error);
+            if (!was) Status = "중계 서버에 연결하지 못했어요" + (string.IsNullOrEmpty(error) ? "" : $" ({error})");
+            else if (string.IsNullOrEmpty(Status) || Status.StartsWith("방")) Status = "연결이 끊겼어요";
+            if (Session.InRoom) Session.LeaveRoom(); else Leave();
         }
     }
 }

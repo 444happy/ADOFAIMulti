@@ -367,13 +367,12 @@ namespace ADOFAIMulti
             x -= 104; if (GUI.Button(new Rect(x, 24, 96, 36), "설정", S_iconBtn)) _settings = !_settings;
             if (Session.InRoom)
             {
-                x -= 116; if (GUI.Button(new Rect(x, 24, 108, 36), "친구 초대", S_iconBtn)) Net.InviteOverlay();
-                if (Net.CurrentLobby.HasValue)
+                if (Net.CanInvite) { x -= 116; if (GUI.Button(new Rect(x, 24, 108, 36), "Steam 초대", S_iconBtn)) Net.InviteOverlay(); }
+                if (!string.IsNullOrEmpty(Net.RoomCode))
                 {
-                    string id = Net.CurrentLobby.Value.Id.Value.ToString();
                     x -= 196;
-                    if (GUI.Button(new Rect(x, 24, 188, 36), "로비  " + id.Substring(Mathf.Max(0, id.Length - 6)) + "  복사", S_iconBtn))
-                    { GUIUtility.systemCopyBuffer = id; Session.Notice = "로비 ID를 복사했어요"; }
+                    if (GUI.Button(new Rect(x, 24, 188, 36), "방 코드  <b>" + Net.RoomCode + "</b>  복사", S_iconBtn))
+                    { GUIUtility.systemCopyBuffer = Net.RoomCode; Session.Notice = "방 코드를 복사했어요"; }
                 }
             }
             GUI.DrawTexture(new Rect(28, 74, W - 56, 1), T_line);
@@ -429,20 +428,20 @@ namespace ADOFAIMulti
 
             GUILayout.BeginArea(left, S_card);
             GUILayout.Label("방 만들기", S_h2);
-            GUILayout.Label("내가 방장. 맵을 고르면 모두에게 자동으로 보내져요.\n최대 8명 · 서버 없이 Steam으로 연결", S_para);
+            GUILayout.Label("내가 방장. 방 코드를 친구에게 알려주면 돼요.\n최대 8명 · Steam 오프라인이어도 OK", S_para);
             GUILayout.FlexibleSpace();
-            if (GUILayout.Button("새 방 만들기", S_cta)) Net.CreateRoom(8);
+            if (GUILayout.Button("새 방 만들기", S_cta)) Net.CreateRoom();
             GUILayout.EndArea();
 
             GUILayout.BeginArea(right, S_card);
             GUILayout.Label("참가하기", S_h2);
-            GUILayout.Label("Steam 초대를 수락하면 바로 들어와요.\n또는 친구에게 받은 로비 ID를 입력:", S_para);
+            GUILayout.Label("친구에게 받은 방 코드를 입력하세요.\nSteam 초대를 수락해도 바로 들어와요.", S_para);
             GUILayout.FlexibleSpace();
             GUILayout.BeginHorizontal();
-            _joinId = GUILayout.TextField(_joinId, new GUIStyle(S_field) { fixedHeight = 58, fontSize = 18 });
-            bool ok = ulong.TryParse(_joinId.Trim(), out var lid);
+            _joinId = Net.NormalizeCode(GUILayout.TextField(_joinId, 8, new GUIStyle(S_field) { fixedHeight = 58, fontSize = 24, fontStyle = FontStyle.Bold }));
+            bool ok = Net.IsValidCode(_joinId);
             GUI.enabled = ok;
-            if (GUILayout.Button("참가", S_ctaGhost, GUILayout.Width(100))) Net.Join(lid);
+            if (GUILayout.Button("참가", S_ctaGhost, GUILayout.Width(100))) Net.Join(_joinId);
             GUI.enabled = true;
             GUILayout.EndHorizontal();
             GUILayout.EndArea();
@@ -463,7 +462,11 @@ namespace ADOFAIMulti
             {
                 var sr = new Rect(r.x, y, r.width, sh);
                 if (i < list.Count) DrawSlot(sr, list[i], i);
-                else if (GUI.Button(sr, "+  빈 자리 · 친구 초대", S_empty)) Net.InviteOverlay();
+                else if (GUI.Button(sr, Net.CanInvite ? "+  빈 자리 · Steam 초대" : "+  빈 자리 · 방 코드 " + Net.RoomCode, S_empty))
+                {
+                    if (Net.CanInvite) Net.InviteOverlay();
+                    else { GUIUtility.systemCopyBuffer = Net.RoomCode ?? ""; Session.Notice = "방 코드를 복사했어요"; }
+                }
                 y += sh + 8;
             }
         }

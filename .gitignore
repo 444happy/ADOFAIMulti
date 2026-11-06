@@ -5,3 +5,5 @@ dist/
 *.zip
 !release/*.dll
 !release/*.zip
+node_modules/
+.wrangler/

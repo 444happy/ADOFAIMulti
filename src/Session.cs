@@ -19,13 +19,14 @@ namespace ADOFAIMulti
         /// <summary>레벨 로딩~결과 대기까지 (ESC/재시작 막는 구간)</summary>
         public static bool InMatch => Phase == Phase.Loading || Phase == Phase.WaitingStart || Phase == Phase.Countdown || Phase == Phase.Playing || Phase == Phase.Results;
 
-        static ulong _pendingJoin;
-        /// <summary>Steam 초대 수락. 레벨 플레이 중이면 메뉴로 나왔을 때 입장</summary>
-        public static void RequestJoin(ulong lobbyId)
+        static string _pendingJoin;
+        /// <summary>초대 수락/코드 입력. 레벨 플레이 중이면 메뉴로 나왔을 때 입장</summary>
+        public static void RequestJoin(string code)
         {
-            if (Game.IsScnGame) { _pendingJoin = lobbyId; Notice = "레벨을 나가면 초대받은 방에 들어갑니다"; return; }
+            if (Game.IsScnGame) { _pendingJoin = code; Notice = "레벨을 나가면 초대받은 방에 들어갑니다"; return; }
+            if (InRoom) LeaveRoom();
             Island.Enter();
-            Net.Join(lobbyId);
+            Net.Join(code);
         }
 
         /// <summary>Ctrl+Shift+Q: 기권하고 로비로</summary>
@@ -249,7 +250,7 @@ namespace ADOFAIMulti
         // ===================== 매 프레임 =====================
         public static void Update()
         {
-            if (_pendingJoin != 0 && !Game.IsScnGame) { var id = _pendingJoin; _pendingJoin = 0; RequestJoin(id); }
+            if (_pendingJoin != null && !Game.IsScnGame) { var code = _pendingJoin; _pendingJoin = null; RequestJoin(code); }
             if (!InRoom) return;
             // 방에 있는 동안 메뉴로 나오면 항상 멀티 로비 화면 (멀티는 로비 안에서만)
             if (!Game.IsScnGame && !Island.InIsland && !Island.Busy && Phase != Phase.Loading) Island.Enter();
