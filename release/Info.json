@@ -2,7 +2,7 @@
   "Id": "ADOFAIMulti",
   "DisplayName": "ADOFAI Multi (얼불춤 멀티)",
   "Author": "창현",
-  "Version": "0.11.0",
+  "Version": "0.11.1",
   "ManagerVersion": "0.22.14.0",
   "AssemblyName": "ADOFAIMulti.dll",
   "EntryMethod": "ADOFAIMulti.Main.Load",

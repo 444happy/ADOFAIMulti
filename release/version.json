@@ -1,7 +1,7 @@
 {
-  "Version": "0.11.0",
+  "Version": "0.11.1",
   "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
   "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
-  "Sha256": "c01ab786204140eff8798fe73eda13c7846065c307b670d8602999d99a47756a",
-  "Notes": "공개 방 목록 + 방 이름/공개 설정"
+  "Sha256": "ac3eb6eb0f3fcf3f164eccd8da47ddcc8b6041fd04cba0949cdf3fa2ee1f49b3",
+  "Notes": "멀티 포탈이 안 보이던 문제 수정 (직접 그리기)"
 }

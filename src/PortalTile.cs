@@ -121,6 +121,7 @@ namespace ADOFAIMulti
             fl.isLandable = true;
             Floor = fl;
             _unit = unit;
+            AddVisual(go, template, unit);
 
             Hidden = false;
             UpdateVisibility(true);
@@ -169,6 +170,72 @@ namespace ADOFAIMulti
             if (go.activeSelf == hide) go.SetActive(!hide);
         }
 
+        // ---------------- 포탈 모양을 모드가 직접 그리기 ----------------
+        // 얼불춤은 메뉴 타일을 메뉴 생성 때 한꺼번에 등록해서 그리므로, 나중에 복제한 타일은 화면에 안 나온다.
+        // → 일반 SpriteRenderer 로 타일 + 불/얼음 포탈 고리를 직접 붙인다.
+        static Sprite _tileSprite, _ringSprite;
+
+        static void AddVisual(GameObject go, scrFloor template, float unit)
+        {
+            if (_tileSprite == null)
+            {
+                _tileSprite = MakeSprite(128, (x, y) =>
+                {
+                    // 둥근 모서리 사각형, 다른 메뉴 타일처럼 연한 회색
+                    float r = 10, n = 128;
+                    float dx = Mathf.Max(0, Mathf.Max(r - x, x - (n - 1 - r))), dy = Mathf.Max(0, Mathf.Max(r - y, y - (n - 1 - r)));
+                    float a = Mathf.Clamp01(r - Mathf.Sqrt(dx * dx + dy * dy) + 0.5f);
+                    float shade = 0.80f + 0.06f * Mathf.PerlinNoise(x * 0.05f, y * 0.05f);
+                    return new Color(shade, shade, shade + 0.04f, a);
+                });
+                _ringSprite = MakeSprite(128, (x, y) =>
+                {
+                    var c = new Vector2(x - 63.5f, y - 63.5f);
+                    float d = c.magnitude / 64f;
+                    float ang = (Mathf.Atan2(c.y, c.x) / Mathf.PI + 1f) * 0.5f;           // 0~1 둘레 위치
+                    var ring = Color.Lerp(new Color(1f, 0.42f, 0.30f), new Color(0.35f, 0.72f, 1f), Mathf.PingPong(ang * 2f, 1f));
+                    float glow = Mathf.Clamp01(1f - Mathf.Abs(d - 0.62f) / 0.22f);           // 불/얼음 고리
+                    float core = Mathf.Clamp01((0.42f - d) / 0.04f);                       // 흰 중심
+                    var col = Color.Lerp(new Color(ring.r, ring.g, ring.b, glow * glow), Color.white, core);
+                    col.a = Mathf.Max(glow * glow, core);
+                    return col;
+                });
+            }
+
+            // 템플릿 타일이 쓰는 정렬 레이어를 따라가서 배경 위·행성 아래에 그려지게
+            int layerId = 0, order = 0;
+            var refSr = template.GetComponentsInChildren<Renderer>(true).Where(r => !(r is ParticleSystemRenderer)).OrderByDescending(r => r.sortingOrder).FirstOrDefault();
+            if (refSr != null) { layerId = refSr.sortingLayerID; order = refSr.sortingOrder; }
+
+            var holder = new GameObject("ADOFAIMulti_PortalVisual");
+            holder.transform.SetParent(go.transform, false);
+            holder.transform.position = go.transform.position;
+            holder.transform.rotation = Quaternion.identity;
+            holder.transform.localScale = Vector3.one;
+            var lossy = go.transform.lossyScale;
+            var fix = new Vector3(lossy.x != 0 ? 1f / lossy.x : 1f, lossy.y != 0 ? 1f / lossy.y : 1f, 1f);  // 부모 스케일 상쇄 → 월드 크기 = 1칸
+
+            var tile = new GameObject("Tile").AddComponent<SpriteRenderer>();
+            tile.transform.SetParent(holder.transform, false);
+            tile.sprite = _tileSprite; tile.sortingLayerID = layerId; tile.sortingOrder = order + 1;
+            tile.transform.localScale = Vector3.Scale(fix, Vector3.one * unit * 0.94f);
+
+            var ring = new GameObject("Ring").AddComponent<SpriteRenderer>();
+            ring.transform.SetParent(holder.transform, false);
+            ring.sprite = _ringSprite; ring.sortingLayerID = layerId; ring.sortingOrder = order + 2;
+            ring.transform.localScale = Vector3.Scale(fix, Vector3.one * unit * 0.86f);
+            holder.AddComponent<PortalSpin>().Ring = ring.transform;
+        }
+
+        static Sprite MakeSprite(int n, Func<int, int, Color> px)
+        {
+            var t = new Texture2D(n, n, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+            for (int y = 0; y < n; y++) for (int x = 0; x < n; x++) t.SetPixel(x, y, px(x, y));
+            t.Apply();
+            t.hideFlags = HideFlags.DontUnloadUnusedAsset;
+            return Sprite.Create(t, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), n);   // 1유닛 = 텍스처 전체
+        }
+
         /// <summary>포탈의 화면 좌표 (라벨 그리기용). 안 보이면 false</summary>
         public static bool ScreenPos(out Vector2 p)
         {
@@ -193,6 +260,23 @@ namespace ADOFAIMulti
             if (Updater.UpdateRequired) return false;   // 구버전: 표지판에 '업데이트 필요' 표시, 입장 막음
             Island.Enter();
             return false;
+        }
+    }
+}
+
+namespace ADOFAIMulti
+{
+    /// <summary>포탈 고리를 천천히 돌리고 살짝 숨쉬게</summary>
+    public class PortalSpin : MonoBehaviour
+    {
+        public Transform Ring;
+        Vector3 _base;
+        void Start() { if (Ring != null) _base = Ring.localScale; }
+        void Update()
+        {
+            if (Ring == null) return;
+            Ring.Rotate(0, 0, -40f * Time.unscaledDeltaTime);
+            Ring.localScale = _base * (1f + Mathf.Sin(Time.unscaledTime * 2.2f) * 0.04f);
         }
     }
 }
