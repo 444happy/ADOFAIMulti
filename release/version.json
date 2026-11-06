@@ -1,7 +1,7 @@
 {
-  "Version": "0.4.1",
+  "Version": "0.4.2",
   "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
   "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
-  "Sha256": "cc231596517bf53943f074d2ca414d4d72edfaa797094917db539fe92f01e419",
-  "Notes": "텍스트 깨짐 수정, 결과 탭 자동 이동"
+  "Sha256": "8383d0222985c65e0338b00fa5dd1268cd5218c175343c9b8e244465dc420517",
+  "Notes": "다른 모드와 글꼴 충돌로 글자가 바뀌어 보이던 문제 수정"
 }

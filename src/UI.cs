@@ -77,7 +77,10 @@ namespace ADOFAIMulti
         static void Styles()
         {
             if (S_h1 != null) return;
-            try { _font = Font.CreateDynamicFontFromOSFont(new[] { "Pretendard", "Pretendard Variable", "Malgun Gothic", "맑은 고딕", "Segoe UI" }, 16); } catch { }
+            // 주의: Font.CreateDynamicFontFromOSFont 로 OS 글꼴을 만들면 Unity 6 에서
+            // 같은 OS 글꼴을 쓰는 다른 모드(StutterFix 등)와 텍스트 캐시가 섞여 글자가 바뀌어 나옴.
+            // → 게임 기본 IMGUI 글꼴(GUI.skin.font)을 그대로 쓴다.
+            _font = null;
 
             T_bg = Solid(C_bg); T_side = Solid(C_side); T_line = Solid(C_line); T_white = Solid(Color.white);
             T_dim = Solid(new Color(0, 0, 0, 0.6f));
