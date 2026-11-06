@@ -1,7 +1,7 @@
 {
-  "Version": "0.10.4",
+  "Version": "0.10.5",
   "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
   "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
-  "Sha256": "fd54c5814be07ae391dfc826768424aff7b5a2dd92c71136feb46291b2ffbdf1",
-  "Notes": "게임 시작 직후 포탈 숨김"
+  "Sha256": "f1fe8adedf862b5456bb514ad97d7ee44f3eee73a4b7913166a9762cc42d92da",
+  "Notes": "시작 화면 포탈 숨김 기준 수정"
 }

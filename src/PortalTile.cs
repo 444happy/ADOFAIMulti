@@ -24,6 +24,9 @@ namespace ADOFAIMulti
         static float _sceneSeenAt;
         // 시작 화면(정가운데) 판정: 포탈을 만들 때의 카메라 위치 = 메뉴 시작 지점
         static Vector2 _spawn; static float _unit = 1f;
+        // 게임을 켜고 처음 메뉴에 왔을 때 행성이 서 있는 자리 = 메인 섬 정가운데 (한 번 정하면 계속 사용)
+        static bool _centerKnown; static Vector2 _center;
+        static float _logUntil;
         static readonly HashSet<Renderer> _offByUs = new HashSet<Renderer>();
         public static bool Hidden;
 
@@ -119,6 +122,7 @@ namespace ADOFAIMulti
             // 시작 화면 중심: 메뉴의 원점 타일(타이틀 아래 3x3 가운데). 원점에 타일이 없으면 행성 위치.
             // (레벨에서 나와 메뉴가 다른 곳에서 시작해도 기준이 흔들리지 않게 원점 우선)
             _spawn = pos.Any(q => q.magnitude < unit * 0.5f) ? Vector2.zero : (PlayerPos() ?? Vector2.zero);
+            _logUntil = Time.unscaledTime + 6f;
             Hidden = false;
             UpdateVisibility(true);
             Main.Log($"Portal: placed at {best} (unit {unit:0.00}) next to {bestParent.name}");
@@ -159,7 +163,13 @@ namespace ADOFAIMulti
         {
             if (Floor == null) return;
             var pos = PlayerPos();
-            bool hide = pos == null || Vector2.Distance(pos.Value, _spawn) < _unit * 0.6f;   // 정가운데 타일 위에 있을 때만 숨김
+            if (!_centerKnown && pos != null) { _centerKnown = true; _center = pos.Value; Main.Log($"Portal: center = {_center} (origin guess {_spawn})"); }
+            // 정가운데 타일 위에 있을 때만 숨김 (처음 서 있던 자리, 또는 원점 타일)
+            bool hide = pos == null
+                        || (_centerKnown && Vector2.Distance(pos.Value, _center) < _unit * 0.6f)
+                        || Vector2.Distance(pos.Value, _spawn) < _unit * 0.6f;
+            if (Time.unscaledTime < _logUntil && Time.frameCount % 60 == 0)
+                Main.Log($"Portal vis: pos={(pos.HasValue ? pos.Value.ToString() : "null")} center={_center} spawn={_spawn} hide={hide}");
             var go = Floor.gameObject;
             if (hide)
             {
