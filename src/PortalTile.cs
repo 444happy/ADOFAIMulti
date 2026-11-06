@@ -23,11 +23,9 @@ namespace ADOFAIMulti
         static int _sceneHandle = -1;
         static float _sceneSeenAt;
         // 시작 화면(정가운데) 판정: 포탈을 만들 때의 카메라 위치 = 메뉴 시작 지점
-        static Vector2 _spawn; static float _unit = 1f;
+        static float _unit = 1f;
         // 게임을 켜고 처음 메뉴에 왔을 때 행성이 서 있는 자리 = 메인 섬 정가운데 (한 번 정하면 계속 사용)
         static bool _centerKnown; static Vector2 _center;
-        static float _logUntil;
-        static readonly HashSet<Renderer> _offByUs = new HashSet<Renderer>();
         public static bool Hidden;
 
         /// <summary>Runner.Update에서 호출: 메인 섬이 새로 열릴 때마다 포탈을 한 번 만든다</summary>
@@ -46,6 +44,11 @@ namespace ADOFAIMulti
             if (Floor != null) { UpdateVisibility(); return; }
             if (Failed) return;
             if (Time.unscaledTime - _sceneSeenAt < 0.8f) return;   // 메뉴 초기화(타일 생성) 기다림
+            // 포탈은 행성이 정가운데에서 처음 벗어날 때 생성 (게임 시작 화면엔 아예 없음)
+            var now = PlayerPos();
+            if (now == null) return;
+            if (!_centerKnown) { _centerKnown = true; _center = now.Value; Main.Log($"Portal: center = {_center}"); }
+            if (Vector2.Distance(now.Value, _center) < 0.5f) return;
             try { Create(); }
             catch (Exception ex) { Failed = true; Main.Log("Portal create failed: " + ex); }
         }
@@ -118,11 +121,7 @@ namespace ADOFAIMulti
             fl.isLandable = true;
             Floor = fl;
             _unit = unit;
-            _offByUs.Clear();
-            // 시작 화면 중심: 메뉴의 원점 타일(타이틀 아래 3x3 가운데). 원점에 타일이 없으면 행성 위치.
-            // (레벨에서 나와 메뉴가 다른 곳에서 시작해도 기준이 흔들리지 않게 원점 우선)
-            _spawn = pos.Any(q => q.magnitude < unit * 0.5f) ? Vector2.zero : (PlayerPos() ?? Vector2.zero);
-            _logUntil = Time.unscaledTime + 6f;
+
             Hidden = false;
             UpdateVisibility(true);
             Main.Log($"Portal: placed at {best} (unit {unit:0.00}) next to {bestParent.name}");
@@ -155,35 +154,19 @@ namespace ADOFAIMulti
         }
 
         /// <summary>
-        /// 메뉴 시작 화면(정가운데)에 있을 때는 포탈을 숨긴다 — 타이틀 로고 위에 겹쳐 보이기 때문.
-        /// 행성이 정가운데 타일에 있을 때만 숨기고, 한 칸이라도 벗어나면 보인다.
-        /// 메뉴 등장 연출 중 게임이 렌더러를 나중에 켜기도 해서, 숨김 상태면 매 프레임 전부 다시 끈다.
+        /// 정가운데 타일에 있을 때는 포탈을 숨긴다 (타이틀 로고와 겹침), 한 칸이라도 벗어나면 보인다.
+        /// 얼불춤은 타일을 개별 Renderer 가 아니라 따로 모아서 그리기 때문에 렌더러를 꺼도 화면에 남는다
+        /// → 포탈 오브젝트 자체를 비활성화한다.
         /// </summary>
         static void UpdateVisibility(bool force = false)
         {
             if (Floor == null) return;
             var pos = PlayerPos();
-            if (!_centerKnown && pos != null) { _centerKnown = true; _center = pos.Value; Main.Log($"Portal: center = {_center} (origin guess {_spawn})"); }
-            // 정가운데 타일 위에 있을 때만 숨김 (처음 서 있던 자리, 또는 원점 타일)
-            bool hide = pos == null
-                        || (_centerKnown && Vector2.Distance(pos.Value, _center) < _unit * 0.6f)
-                        || Vector2.Distance(pos.Value, _spawn) < _unit * 0.6f;
-            if (Time.unscaledTime < _logUntil && Time.frameCount % 60 == 0)
-                Main.Log($"Portal vis: pos={(pos.HasValue ? pos.Value.ToString() : "null")} center={_center} spawn={_spawn} hide={hide}");
-            var go = Floor.gameObject;
-            if (hide)
-            {
-                foreach (var r in go.GetComponentsInChildren<Renderer>(true))
-                    if (r.enabled) { r.enabled = false; _offByUs.Add(r); }
-                foreach (var c in go.GetComponentsInChildren<Collider2D>(true)) c.enabled = false;
-            }
-            else if (Hidden || force)
-            {
-                foreach (var r in _offByUs) if (r != null) r.enabled = true;
-                _offByUs.Clear();
-                foreach (var c in go.GetComponentsInChildren<Collider2D>(true)) c.enabled = true;
-            }
+            bool hide = pos == null || (_centerKnown && Vector2.Distance(pos.Value, _center) < _unit * 0.6f);
+            if (hide == Hidden && !force) return;
             Hidden = hide;
+            var go = Floor.gameObject;
+            if (go.activeSelf == hide) go.SetActive(!hide);
         }
 
         /// <summary>포탈의 화면 좌표 (라벨 그리기용). 안 보이면 false</summary>

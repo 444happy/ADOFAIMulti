@@ -1,7 +1,7 @@
 {
-  "Version": "0.10.5",
+  "Version": "0.10.6",
   "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
   "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
-  "Sha256": "f1fe8adedf862b5456bb514ad97d7ee44f3eee73a4b7913166a9762cc42d92da",
-  "Notes": "시작 화면 포탈 숨김 기준 수정"
+  "Sha256": "3ed92cf54b7c7cc144205fb7c63921fced900d168833143db657eb29069c1897",
+  "Notes": "포탈: 처음 움직일 때 생성, 숨김은 오브젝트 비활성화"
 }
