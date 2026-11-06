@@ -146,14 +146,14 @@ namespace ADOFAIMulti
 
         /// <summary>
         /// 메뉴 시작 화면(정가운데)에 있을 때는 포탈을 숨긴다 — 타이틀 로고 위에 겹쳐 보이기 때문.
-        /// 행성이 시작 타일에서 2.5칸 넘게 벗어나면 보인다.
+        /// 행성이 정가운데 타일에 있을 때만 숨기고, 한 칸이라도 벗어나면 보인다.
         /// 메뉴 등장 연출 중 게임이 렌더러를 나중에 켜기도 해서, 숨김 상태면 매 프레임 전부 다시 끈다.
         /// </summary>
         static void UpdateVisibility(bool force = false)
         {
             if (Floor == null) return;
             var pos = PlayerPos();
-            bool hide = pos == null || Vector2.Distance(pos.Value, _spawn) < _unit * 2.5f;
+            bool hide = pos == null || Vector2.Distance(pos.Value, _spawn) < _unit * 0.5f;   // 정가운데 타일 위에 있을 때만 숨김
             var go = Floor.gameObject;
             if (hide)
             {

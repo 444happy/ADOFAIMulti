@@ -1,7 +1,7 @@
 {
-  "Version": "0.10.2",
+  "Version": "0.10.3",
   "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
   "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
-  "Sha256": "74d8bd0b521b2f7a71d339d2d56d7dd44532d5ce736e1f04f387a5ac63c402f7",
-  "Notes": "시작 화면 포탈 완전히 숨김"
+  "Sha256": "c2d60099d914f6f0362f2b313a5917b6c2843814d4ae3eee45de2e838f0b704a",
+  "Notes": "포탈은 정가운데 타일에서만 숨김"
 }
