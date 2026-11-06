@@ -22,6 +22,10 @@ namespace ADOFAIMulti
         public static bool Failed;             // 놓을 자리를 못 찾음 → UI가 대체 버튼 표시
         static int _sceneHandle = -1;
         static float _sceneSeenAt;
+        // 시작 화면(정가운데) 판정: 포탈을 만들 때의 카메라 위치 = 메뉴 시작 지점
+        static Vector2 _centerCam; static float _unit = 1f;
+        static Renderer[] _renderers; static Collider2D[] _colliders;
+        public static bool Hidden;
 
         /// <summary>Runner.Update에서 호출: 메인 섬이 새로 열릴 때마다 포탈을 한 번 만든다</summary>
         public static void Tick()
@@ -36,7 +40,8 @@ namespace ADOFAIMulti
                 Floor = null; Failed = false;
                 return;
             }
-            if (Floor != null || Failed) return;
+            if (Floor != null) { UpdateVisibility(); return; }
+            if (Failed) return;
             if (Time.unscaledTime - _sceneSeenAt < 0.8f) return;   // 메뉴 초기화(타일 생성) 기다림
             try { Create(); }
             catch (Exception ex) { Failed = true; Main.Log("Portal create failed: " + ex); }
@@ -109,17 +114,45 @@ namespace ADOFAIMulti
             fl.arguments = Arg;
             fl.isLandable = true;
             Floor = fl;
+            _renderers = go.GetComponentsInChildren<Renderer>(true).Where(x => x.enabled).ToArray();
+            _colliders = go.GetComponentsInChildren<Collider2D>(true);
+            _unit = unit;
+            var cam = Cam();
+            _centerCam = cam != null ? (Vector2)cam.transform.position : Vector2.zero;
+            Hidden = false;
+            UpdateVisibility();
             Main.Log($"Portal: placed at {best} (unit {unit:0.00}) next to {bestParent.name}");
+        }
+
+        static Camera Cam()
+        {
+            Camera cam = null;
+            try { cam = ADOBase.controller?.camy?.camobj; } catch { }
+            return cam != null ? cam : Camera.main;
+        }
+
+        /// <summary>
+        /// 메뉴 시작 화면(정가운데)에 있을 때는 포탈을 숨긴다 — 타이틀 로고 위에 겹쳐 보이기 때문.
+        /// 카메라가 시작 지점에서 2.5칸 넘게 벗어나면 다시 보인다.
+        /// </summary>
+        static void UpdateVisibility()
+        {
+            var cam = Cam();
+            if (cam == null || Floor == null) return;
+            bool hide = Vector2.Distance(cam.transform.position, _centerCam) < _unit * 2.5f;
+            // 게임이 타일 연출 중에 렌더러를 다시 켤 수 있어서, 숨김 상태면 매 프레임 확인
+            if (hide == Hidden && !(hide && _renderers != null && _renderers.Any(r => r != null && r.enabled))) return;
+            Hidden = hide;
+            if (_renderers != null) foreach (var r in _renderers) if (r != null) r.enabled = !hide;
+            if (_colliders != null) foreach (var c in _colliders) if (c != null) c.enabled = !hide;
         }
 
         /// <summary>포탈의 화면 좌표 (라벨 그리기용). 안 보이면 false</summary>
         public static bool ScreenPos(out Vector2 p)
         {
             p = default;
-            if (Floor == null) return false;
-            Camera cam = null;
-            try { cam = ADOBase.controller?.camy?.camobj; } catch { }
-            if (cam == null) cam = Camera.main;
+            if (Floor == null || Hidden) return false;
+            var cam = Cam();
             if (cam == null) return false;
             var sp = cam.WorldToScreenPoint(Floor.transform.position);
             if (sp.z < 0) return false;
@@ -135,6 +168,7 @@ namespace ADOFAIMulti
         static bool Prefix(string portalArguments)
         {
             if (portalArguments != PortalTile.Arg) return true;
+            if (Updater.UpdateRequired) return false;   // 구버전: 표지판에 '업데이트 필요' 표시, 입장 막음
             Island.Enter();
             return false;
         }

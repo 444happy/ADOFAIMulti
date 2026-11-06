@@ -225,9 +225,6 @@ namespace ADOFAIMulti
         // =====================================================================
         static void DrawPortal()
         {
-            if (Updater.Current == Updater.State.ReadyToRestart)
-                GUI.Label(new Rect(Screen.width - 420, Screen.height - 40, 400, 22), $"멀티 v{Updater.Latest} 받음 · 재시작하면 적용", Label(13, C_acc, FontStyle.Normal, TextAnchor.MiddleRight));
-
             // 메인 섬의 멀티 포탈 위에 표지판
             if (PortalTile.ScreenPos(out var p))
             {
@@ -236,7 +233,7 @@ namespace ADOFAIMulti
                 GUI.Box(r, "", S_card);
                 Orbit(new Vector2(r.x + 22, r.y + r.height / 2f), 7, 4, 1.4f);
                 GUI.Label(new Rect(r.x + 36, r.y + 4, r.width - 40, 22), "멀티", Label(16, C_txt, FontStyle.Bold));
-                GUI.Label(new Rect(r.x + 36, r.y + 23, r.width - 40, 18), "포탈로 이동", Label(11, C_sub));
+                GUI.Label(new Rect(r.x + 36, r.y + 23, r.width - 40, 18), Updater.UpdateRequired ? "업데이트 필요 · 재시작" : "포탈로 이동", Label(11, Updater.UpdateRequired ? C_gold : C_sub));
                 Fill(new Rect(p.x - 1, r.yMax, 2, 18 - bob), A(C_acc, 0.6f));
                 return;
             }
@@ -299,7 +296,8 @@ namespace ADOFAIMulti
             DrawTopBar(W);
 
             var body = new Rect(28, 84, W - 56, H - 84 - 24);
-            if (!Session.InRoom) DrawEntrance(body);
+            if (!Session.InRoom && Updater.UpdateRequired) DrawUpdateRequired(body);
+            else if (!Session.InRoom) DrawEntrance(body);
             else
             {
                 float lw = Mathf.Clamp(W * 0.27f, 300, 400);
@@ -411,6 +409,26 @@ namespace ADOFAIMulti
                 Dot(new Vector2(cx, r.y + 12), i == cur ? 8 : 6, dc);
                 if (i == cur) { var o = GUI.color; GUI.color = A(Color.white, 0.25f + Mathf.PingPong(Time.unscaledTime, 0.5f) * 0.3f); Dot(new Vector2(cx, r.y + 12), 13, C_acc); GUI.color = o; }
                 GUI.Label(new Rect(cx - seg / 2f, r.y + 22, seg, 18), Steps[i], i == cur ? S_stepOn : S_stepOff);
+            }
+        }
+
+        // ---------------- 구버전: 이용 막기 ----------------
+        static void DrawUpdateRequired(Rect b)
+        {
+            float cx = b.x + b.width / 2f;
+            Orbit(new Vector2(cx, b.y + 110), 46, 18, 1.1f);
+            GUI.Label(new Rect(b.x, b.y + 170, b.width, 50), "새 버전이 나왔어요", Label(36, C_txt, FontStyle.Bold, TextAnchor.MiddleCenter));
+            string sub = Updater.Current == Updater.State.ReadyToRestart
+                ? $"v{Updater.Latest} 를 받아뒀어요. 게임을 재시작하면 적용되고, 그때부터 멀티를 쓸 수 있어요."
+                : Updater.Current == Updater.State.Downloading ? $"v{Updater.Latest} 받는 중..."
+                : $"현재 v{Main.Version} → 최신 v{Updater.Latest}. 업데이트를 받은 뒤 재시작해 주세요.";
+            GUI.Label(new Rect(b.x, b.y + 220, b.width, 28), sub, Label(16, C_sub, FontStyle.Normal, TextAnchor.MiddleCenter));
+            GUI.Label(new Rect(b.x, b.y + 250, b.width, 24), "버전이 다르면 친구 방에 들어갈 수 없어서, 업데이트 전에는 방 만들기·참가를 막아뒀어요.", Label(13, A(C_sub, 0.7f), FontStyle.Normal, TextAnchor.MiddleCenter));
+            if (Updater.Current == Updater.State.Failed)
+            {
+                var br = new Rect(cx - 140, b.y + 300, 280, 58);
+                if (GUI.Button(br, "다시 받기", S_cta) && Runner.Instance != null) Updater.CheckNow(Runner.Instance);
+                GUI.Label(new Rect(b.x, br.yMax + 10, b.width, 22), Esc(Updater.Error), Label(12, A(C_sub, 0.7f), FontStyle.Normal, TextAnchor.MiddleCenter));
             }
         }
 

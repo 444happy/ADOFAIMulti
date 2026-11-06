@@ -25,6 +25,7 @@ namespace ADOFAIMulti
         public static void RequestJoin(string code)
         {
             if (Game.IsScnGame) { _pendingJoin = code; Notice = "레벨을 나가면 초대받은 방에 들어갑니다"; return; }
+            if (Updater.UpdateRequired) { Island.Enter(); Notice = "새 버전으로 업데이트한 뒤 들어갈 수 있어요"; return; }
             if (InRoom) LeaveRoom();
             Island.Enter();
             Net.Join(code);

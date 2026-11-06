@@ -1,7 +1,7 @@
 {
-  "Version": "0.10.0",
+  "Version": "0.10.1",
   "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
   "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
-  "Sha256": "8a66daca9d3fad54117f89999eac91efc3de9cbf0699c7598a6337dc23aaa25e",
-  "Notes": "TUF에서 맵 검색·선택, 각자 CDN에서 직접 다운로드"
+  "Sha256": "1fe72a995b6ae05b5c74a022eaf1f49bf5a32ddda42767dde9396d3b961250b7",
+  "Notes": "시작 화면에서 포탈 숨김, 구버전 이용 차단, 메뉴 업데이트 문구 제거"
 }

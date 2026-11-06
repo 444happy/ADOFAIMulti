@@ -28,6 +28,8 @@ namespace ADOFAIMulti
         public static string Notes = "";
         public static string Error = "";
         public static float LastCheck = -999;
+        /// <summary>서버에 더 새 버전이 있음 → 멀티 이용 막음 (재시작해서 업데이트해야 함)</summary>
+        public static bool UpdateRequired => !string.IsNullOrEmpty(Latest) && IsNewer(Latest, Main.Version);
         static bool _running;
 
         public static string StatusText
