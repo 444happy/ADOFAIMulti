@@ -2,6 +2,6 @@
   "Version": "0.17.0",
   "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
   "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
-  "Sha256": "c1a9fbb20d51f091ce75648d98beb80165144ded9f4d902df5d053bec0853d38",
-  "Notes": "비밀번호 보기(눈), 방 안에서 만든 참가 코드로만 입장, 맵 선택 버튼 하나로, 판정 설정"
+  "Sha256": "608884521555ef3ae516b26a0112d6f29e5a11fb93bc0dbc61ac76b61e00b8ca",
+  "Notes": "개발 환경: IDE 프로젝트(ADOFAIMulti.csproj)"
 }

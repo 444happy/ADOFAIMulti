@@ -15,12 +15,10 @@ LATEST="$DL"
 OUT="$ROOT/release"; rm -rf "$OUT"; mkdir -p "$OUT"
 BUILD="$ROOT/build"; mkdir -p "$BUILD"
 
-# 1) 소스에 저장소 주인 반영 후 빌드
-sed "s/__OWNER__/$OWNER/" "$ROOT/src/Updater.cs" > /tmp/Updater.gen.cs
-SRCS=$(ls "$ROOT"/src/*.cs | grep -v Updater.cs)
-REFS=""; for f in "$M"/*.dll "$M"/UnityModManager/UnityModManager.dll "$M"/UnityModManager/0Harmony.dll; do REFS="$REFS -r:$f"; done
-dotnet "$CSC" -nologo -noconfig -nostdlib -target:library -langversion:9 -optimize -nowarn:1701,1702,0436 \
-  -out:"$BUILD/ADOFAIMulti.dll" $REFS $SRCS /tmp/Updater.gen.cs
+# 1) 빌드 (ADOFAIMulti.csproj — IDE 와 같은 프로젝트, 게임 DLL 참조)
+dotnet build "$ROOT/ADOFAIMulti.csproj" -c Release -nologo -v q -p:ManagedDir="$M" -p:GamePath=/nonexistent \
+  ${NUGET_CONFIG:+--configfile "$NUGET_CONFIG"} -o "$BUILD/out" >/dev/null
+cp "$BUILD/out/ADOFAIMulti.dll" "$BUILD/ADOFAIMulti.dll"
 
 # 2) Info.json (UMM이 업데이트 확인할 Repository 포함)
 cat > "$BUILD/Info.json" <<EOF

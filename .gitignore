@@ -7,3 +7,8 @@ dist/
 !release/*.zip
 node_modules/
 .wrangler/
+bin/
+obj/
+.vs/
+.idea/
+*.user

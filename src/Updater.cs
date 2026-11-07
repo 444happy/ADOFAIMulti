@@ -16,7 +16,7 @@ namespace ADOFAIMulti
     public static class Updater
     {
         // ▼ 저장소만 바꾸면 됨
-        public const string Owner = "__OWNER__";
+        public const string Owner = "444happy";
         public const string Repo = "ADOFAIMulti";
 
         public static string BaseUrl => $"https://raw.githubusercontent.com/{Owner}/{Repo}/main/release";

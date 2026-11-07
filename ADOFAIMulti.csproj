@@ -1,0 +1,101 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    ADOFAI Multi 개발용 프로젝트 (Visual Studio / Rider / VS Code 에서 열기)
+    - 게임 폴더의 DLL(mscorlib 포함)로 빌드 → 실제 게임 런타임과 똑같은 환경 (PC마다 다른 오류 방지)
+    - Debug 빌드: 끝나면 게임 Mods\ADOFAIMulti 에 dll + Info.json 자동 복사 → 게임 재시작해서 확인
+    - 게임 위치가 기본값과 다르면: 환경 변수 ADOFAI_PATH 를 게임 폴더로 지정하거나
+      dotnet build -p:GamePath="D:\SteamLibrary\steamapps\common\A Dance of Fire and Ice"
+    - 배포(모두에게 자동 업데이트)는 여전히 make_release.sh 로
+  -->
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <AssemblyName>ADOFAIMulti</AssemblyName>
+    <RootNamespace>ADOFAIMulti</RootNamespace>
+    <LangVersion>9</LangVersion>
+    <Nullable>disable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <NoWarn>$(NoWarn);1701;1702;0436;CS0436</NoWarn>
+    <DebugType>portable</DebugType>
+
+    <GamePath Condition="'$(GamePath)' == '' and '$(ADOFAI_PATH)' != ''">$(ADOFAI_PATH)</GamePath>
+    <GamePath Condition="'$(GamePath)' == ''">C:\Program Files (x86)\Steam\steamapps\common\A Dance of Fire and Ice</GamePath>
+    <ManagedDir Condition="'$(ManagedDir)' == ''">$(GamePath)\A Dance of Fire and Ice_Data\Managed</ManagedDir>
+    <ModsDir>$(GamePath)\Mods\ADOFAIMulti</ModsDir>
+
+    <!-- .NET 기본 라이브러리 대신 게임에 들어 있는 것으로 빌드 -->
+    <NoStdLib>true</NoStdLib>
+    <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
+    <FrameworkPathOverride>$(ManagedDir)</FrameworkPathOverride>
+    <AutomaticallyUseReferenceAssemblyPackages>false</AutomaticallyUseReferenceAssemblyPackages>
+
+    <!-- 버전은 src/Main.cs 의 Version 한 곳에서만 관리 -->
+    <ModVersion>$([System.Text.RegularExpressions.Regex]::Match($([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)/src/Main.cs')), 'Version = "([^"]+)"').Groups[1].Value)</ModVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="src\**\*.cs" />
+    <Reference Include="mscorlib"><HintPath>$(ManagedDir)\mscorlib.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="netstandard"><HintPath>$(ManagedDir)\netstandard.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="System"><HintPath>$(ManagedDir)\System.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="System.Core"><HintPath>$(ManagedDir)\System.Core.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="System.Runtime"><HintPath>$(ManagedDir)\System.Runtime.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="System.Xml"><HintPath>$(ManagedDir)\System.Xml.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="System.Xml.Linq"><HintPath>$(ManagedDir)\System.Xml.Linq.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="System.IO.Compression"><HintPath>$(ManagedDir)\System.IO.Compression.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="System.IO.Compression.FileSystem"><HintPath>$(ManagedDir)\System.IO.Compression.FileSystem.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Assembly-CSharp"><HintPath>$(ManagedDir)\Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Assembly-CSharp-firstpass"><HintPath>$(ManagedDir)\Assembly-CSharp-firstpass.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="DOTween"><HintPath>$(ManagedDir)\DOTween.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Facepunch.Steamworks.Win64"><HintPath>$(ManagedDir)\Facepunch.Steamworks.Win64.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Newtonsoft.Json"><HintPath>$(ManagedDir)\Newtonsoft.Json.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="R3"><HintPath>$(ManagedDir)\R3.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="RDTools"><HintPath>$(ManagedDir)\RDTools.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Rewired_Core"><HintPath>$(ManagedDir)\Rewired_Core.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="SkyHook.Unity"><HintPath>$(ManagedDir)\SkyHook.Unity.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UniTask"><HintPath>$(ManagedDir)\UniTask.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Unity.Addressables"><HintPath>$(ManagedDir)\Unity.Addressables.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Unity.ResourceManager"><HintPath>$(ManagedDir)\Unity.ResourceManager.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Unity.TextMeshPro"><HintPath>$(ManagedDir)\Unity.TextMeshPro.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine"><HintPath>$(ManagedDir)\UnityEngine.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.AnimationModule"><HintPath>$(ManagedDir)\UnityEngine.AnimationModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.AudioModule"><HintPath>$(ManagedDir)\UnityEngine.AudioModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(ManagedDir)\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.IMGUIModule"><HintPath>$(ManagedDir)\UnityEngine.IMGUIModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.ImageConversionModule"><HintPath>$(ManagedDir)\UnityEngine.ImageConversionModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.InputLegacyModule"><HintPath>$(ManagedDir)\UnityEngine.InputLegacyModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.ParticleSystemModule"><HintPath>$(ManagedDir)\UnityEngine.ParticleSystemModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.Physics2DModule"><HintPath>$(ManagedDir)\UnityEngine.Physics2DModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.TextCoreFontEngineModule"><HintPath>$(ManagedDir)\UnityEngine.TextCoreFontEngineModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.TextCoreTextEngineModule"><HintPath>$(ManagedDir)\UnityEngine.TextCoreTextEngineModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.TextRenderingModule"><HintPath>$(ManagedDir)\UnityEngine.TextRenderingModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.UI"><HintPath>$(ManagedDir)\UnityEngine.UI.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.UIModule"><HintPath>$(ManagedDir)\UnityEngine.UIModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.UnityWebRequestModule"><HintPath>$(ManagedDir)\UnityEngine.UnityWebRequestModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.VideoModule"><HintPath>$(ManagedDir)\UnityEngine.VideoModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityModManager"><HintPath>$(ManagedDir)\UnityModManager\UnityModManager.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="0Harmony"><HintPath>$(ManagedDir)\UnityModManager\0Harmony.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+
+  <!-- Debug 빌드 후 게임 Mods 폴더로 바로 복사 -->
+  <Target Name="DeployToGame" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug' and Exists('$(GamePath)\Mods')">
+    <PropertyGroup>
+      <InfoJson><![CDATA[{
+  "Id": "ADOFAIMulti",
+  "DisplayName": "ADOFAI Multi (얼불춤 멀티)",
+  "Author": "창현",
+  "Version": "$(ModVersion)",
+  "ManagerVersion": "0.22.14.0",
+  "AssemblyName": "ADOFAIMulti.dll",
+  "EntryMethod": "ADOFAIMulti.Main.Load",
+  "HomePage": "https://github.com/444happy/ADOFAIMulti",
+  "Repository": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/repository.json"
+}]]></InfoJson>
+    </PropertyGroup>
+    <MakeDir Directories="$(ModsDir)" />
+    <Copy SourceFiles="$(TargetPath);$(TargetDir)$(TargetName).pdb" DestinationFolder="$(ModsDir)" SkipUnchangedFiles="false" ContinueOnError="true" />
+    <WriteLinesToFile File="$(ModsDir)\Info.json" Lines="$(InfoJson)" Overwrite="true" Encoding="utf-8" />
+    <Message Importance="high" Text="ADOFAI Multi v$(ModVersion) → $(ModsDir) (게임을 재시작하면 적용돼요)" />
+  </Target>
+</Project>

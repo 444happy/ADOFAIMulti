@@ -29,3 +29,14 @@ irm https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/install.ps1 | ie
 
 ## 빌드
 게임의 `A Dance of Fire and Ice_Data/Managed` DLL을 참조해 `make_release.sh <owner>`로 빌드합니다. (게임 DLL은 저장소에 포함하지 않습니다)
+
+## 개발 (Visual Studio / Rider / VS Code)
+
+1. `ADOFAIMulti.csproj` 를 IDE로 열기 (VS Code는 폴더를 열고 C# Dev Kit 설치)
+2. 게임이 기본 위치(`C:\Program Files (x86)\Steam\steamapps\common\A Dance of Fire and Ice`)가 아니면
+   환경 변수 `ADOFAI_PATH` 를 게임 폴더로 지정
+3. **Debug 빌드** (VS: Ctrl+Shift+B, VS Code: Ctrl+Shift+B) → 게임 `Mods\ADOFAIMulti` 에 자동 복사 → 게임 재시작해서 확인
+
+- 게임 폴더의 DLL(mscorlib 포함)로 빌드하므로 실제 게임과 같은 환경이에요.
+- 버전은 `src/Main.cs` 의 `Version` 한 곳에서만 바꾸면 돼요.
+- 모두에게 배포(자동 업데이트)는 `./make_release.sh 444happy "변경 내용"` → 커밋/푸시.
