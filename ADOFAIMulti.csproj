@@ -95,6 +95,8 @@
     </PropertyGroup>
     <MakeDir Directories="$(ModsDir)" />
     <Copy SourceFiles="$(TargetPath);$(TargetDir)$(TargetName).pdb" DestinationFolder="$(ModsDir)" SkipUnchangedFiles="false" ContinueOnError="true" />
+    <!-- 설계 배치도 개발용으로 복사 (있으면 원격 layout.json 대신 이걸 씀, 고치면 1초 안에 반영) -->
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\design\layout.json" DestinationFiles="$(ModsDir)\layout.dev.json" SkipUnchangedFiles="false" ContinueOnError="true" />
     <WriteLinesToFile File="$(ModsDir)\Info.json" Lines="$(InfoJson)" Overwrite="true" Encoding="utf-8" />
     <Message Importance="high" Text="ADOFAI Multi v$(ModVersion) → $(ModsDir) (게임을 재시작하면 적용돼요)" />
   </Target>

@@ -5,7 +5,7 @@ using UnityEngine;
 namespace ADOFAIMulti
 {
     /// <summary>
-    /// UI 색 테마. 프리셋 2종(불과 얼음 / 모노) + 사용자가 색 5개를 고르는 커스텀.
+    /// UI 색 테마. 프리셋 3종(기본 / 불과 얼음 / 모노) + 사용자가 색 5개를 고르는 커스텀.
     /// 나머지 색(그라데이션, 테두리, 보조 글자 등)은 기본 5색에서 자동 계산한다.
     /// 저장: Mods/ADOFAIMulti/theme.txt (선택한 테마 id), custom_theme.txt (커스텀 5색)
     /// </summary>
@@ -15,7 +15,7 @@ namespace ADOFAIMulti
         // 기본 5색 (커스텀에서 편집)
         public Color Bg, Card, Txt, Acc, Acc2;
         // 파생 색
-        public Color BgTop, Glow, Side, CardHi, Field, Line, AccText, Sub, Fire, Ice, Gold;
+        public Color BgTop, Glow, Side, CardHi, Field, Line, AccText, Sub, Fire, Ice, Gold, Ok;
 
         static Color H(string h) { ColorUtility.TryParseHtmlString("#" + h, out var c); return c; }
         static Color Mix(Color a, Color b, float t) { var c = Color.Lerp(a, b, t); c.a = 1; return c; }
@@ -43,17 +43,19 @@ namespace ADOFAIMulti
             Line = Mix(card, txt, 0.10f);
             Sub = Mix(txt, bg, 0.40f);
             AccText = Lum(acc) > 0.55f ? Mix(bg, Color.black, 0.3f) : Color.white;
-            Fire = H("ff6a4d"); Ice = H("5ab8ff"); Gold = H("ffd36b");
+            Fire = H("ff7a45"); Ice = H("5ab8ff"); Gold = H("ffd166"); Ok = H("5fd18b");
         }
 
+        /// <summary>설계판(layout.json) 색과 같은 슬레이트 + 하늘색</summary>
+        public static readonly Theme Slate = FromBase("slate", "기본", H("0d0f12"), H("1b1f26"), H("e8ecf1"), H("5ab8ff"), H("7cc6ff"));
         public static readonly Theme FireIce = FromBase("fireice", "불과 얼음", H("0b0d18"), H("171b33"), H("eef0ff"), H("ff7a59"), H("5aa9ff"));
         public static readonly Theme Mono = FromBase("mono", "모노", H("0d0d0f"), H("1b1b20"), H("f4f4f6"), H("f2f2f2"), H("b8b8c2"));
         public static readonly Theme Custom = FromBase("custom", "커스텀", H("101418"), H("1c222a"), H("eceff4"), H("6aa8ff"), H("c58bff"));
 
-        public static readonly Theme[] All = { Mono, FireIce, Custom };
+        public static readonly Theme[] All = { Slate, Mono, FireIce, Custom };
 
-        /// <summary>기본값: 모노 (가장 무난한 중립 톤)</summary>
-        public static Theme Current = Mono;
+        /// <summary>기본값: 기본 (설계판 배치와 같은 색)</summary>
+        public static Theme Current = Slate;
         /// <summary>커스텀 색이 바뀔 때마다 증가 → UI가 스타일을 다시 만든다</summary>
         public static int Version;
 

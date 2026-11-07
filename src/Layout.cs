@@ -12,6 +12,7 @@ namespace ADOFAIMulti
     /// <summary>
     /// UI 설계판(웹)에서 만든 화면 배치. 1920×1080 기준 좌표.
     /// 파일: Mods/ADOFAIMulti/layout.json  ·  최신본: release/layout.json (시작할 때와 5분마다 받아서 바로 적용)
+    /// 개발: Mods/ADOFAIMulti/layout.dev.json 이 있으면 그것만 쓰고 원격을 받지 않음 (Debug 빌드가 design/layout.json 을 복사)
     /// </summary>
     public static class Layout
     {
@@ -30,13 +31,20 @@ namespace ADOFAIMulti
         static string _lastText;
 
         static string FilePath => Path.Combine(Main.Mod.Path, "layout.json");
+        static string DevPath => Path.Combine(Main.Mod.Path, "layout.dev.json");
+        static bool Dev => File.Exists(DevPath);
+        static DateTime _devStamp;
         const string Url = "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/layout.json";
 
         public static Screen Get(string id) => Enabled && Screens.TryGetValue(id, out var s) && s.Els.Count > 0 ? s : null;
 
         public static void LoadLocal()
         {
-            try { if (File.Exists(FilePath)) Apply(File.ReadAllText(FilePath)); }
+            try
+            {
+                if (Dev) { _devStamp = File.GetLastWriteTimeUtc(DevPath); Apply(File.ReadAllText(DevPath)); Main.Log("layout: 개발용 layout.dev.json 사용"); }
+                else if (File.Exists(FilePath)) Apply(File.ReadAllText(FilePath));
+            }
             catch (Exception ex) { Main.Log("layout load: " + ex.Message); }
         }
 
@@ -44,6 +52,18 @@ namespace ADOFAIMulti
         {
             while (true)
             {
+                // 개발용 배치: 원격 대신 파일이 바뀌면 바로 다시 읽음
+                if (Dev)
+                {
+                    try
+                    {
+                        var t = File.GetLastWriteTimeUtc(DevPath);
+                        if (t != _devStamp) { _devStamp = t; if (Apply(File.ReadAllText(DevPath))) Main.Log("layout.dev.json 다시 읽음 v" + Version); }
+                    }
+                    catch { }
+                    yield return new WaitForSecondsRealtime(1);
+                    continue;
+                }
                 using (var req = UnityWebRequest.Get(Url + "?t=" + DateTime.UtcNow.Ticks))
                 {
                     req.timeout = 15;

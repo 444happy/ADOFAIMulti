@@ -1,7 +1,7 @@
 {
-  "Version": "0.17.0",
+  "Version": "0.18.0",
   "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
   "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
-  "Sha256": "608884521555ef3ae516b26a0112d6f29e5a11fb93bc0dbc61ac76b61e00b8ca",
-  "Notes": "개발 환경: IDE 프로젝트(ADOFAIMulti.csproj)"
+  "Sha256": "06490adc85b1887ea373793d742702d725c3f8605f48ccb6136191e73f710b20",
+  "Notes": "UI 디자인 개편: 방 카드·플레이어 슬롯·상황별 메인 버튼·진행 단계·결과 시상대·판정 분포, 아이콘, 하단 단축키 바, 정렬 메뉴 클릭 겹침 수정"
 }

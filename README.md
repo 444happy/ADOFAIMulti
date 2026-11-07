@@ -39,4 +39,5 @@ irm https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/install.ps1 | ie
 
 - 게임 폴더의 DLL(mscorlib 포함)로 빌드하므로 실제 게임과 같은 환경이에요.
 - 버전은 `src/Main.cs` 의 `Version` 한 곳에서만 바꾸면 돼요.
+- Debug 빌드는 `design/layout.json` 을 `Mods\ADOFAIMulti\layout.dev.json` 으로도 복사해요. 이 파일이 있으면 게임이 GitHub의 배치 대신 이걸 쓰고, 고치면 1초 안에 다시 읽어요. (배포본 배치를 다시 보려면 이 파일을 지우세요)
 - 모두에게 배포(자동 업데이트)는 `./make_release.sh 444happy "변경 내용"` → 커밋/푸시.
