@@ -77,12 +77,12 @@ namespace ADOFAIMulti
             return new Entry { Id = r.ReadUInt64(), Name = r.ReadString(), State = (PState)r.ReadByte(), Download = r.ReadSingle(), LobbyReady = r.ReadBoolean(), Stats = Stats.Read(r) };
         }
 
-        /// <summary>정확도 → X정확도 → 미스 적은 순</summary>
+        /// <summary>절대 정확도(X정확도) → 정확도 → 미스 적은 순</summary>
         public static int Compare(Entry a, Entry b)
         {
-            int c = b.Stats.Acc.CompareTo(a.Stats.Acc);
+            int c = b.Stats.XAcc.CompareTo(a.Stats.XAcc);
             if (c != 0) return c;
-            c = b.Stats.XAcc.CompareTo(a.Stats.XAcc);
+            c = b.Stats.Acc.CompareTo(a.Stats.Acc);
             if (c != 0) return c;
             return (a.Stats.Miss + a.Stats.TooEarly + a.Stats.TooLate).CompareTo(b.Stats.Miss + b.Stats.TooEarly + b.Stats.TooLate);
         }

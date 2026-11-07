@@ -272,9 +272,9 @@ namespace ADOFAIMulti
 
         static void HostTick()
         {
-            // 방장이 시작을 누르면(HostStart) 레벨에 들어가고, 모두 레벨에 들어오면 바로 카운트다운
+            // 방장이 시작을 누르면(HostStart) 레벨에 들어가고, 레벨 안에서 모두 아무 키나 눌러 준비하면 카운트다운
             var parts = Participants().ToList();
-            if (Phase == Phase.WaitingStart && parts.Count > 0 && parts.All(e => e.State == PState.Loaded || e.State == PState.Ready))
+            if (Phase == Phase.WaitingStart && parts.Count > 0 && parts.All(e => e.State == PState.Ready))
             {
                 foreach (var e in parts) e.State = PState.Playing;
                 var pkt = Packet.Build(Msg.Go, w => w.Write(CountdownMs));
@@ -331,6 +331,12 @@ namespace ADOFAIMulti
         /// <summary>멤버: 맵을 다 받은 뒤 로비에서 준비 / 준비 취소</summary>
         public static bool CanReady => Net.InRoom && !Net.IsHost && Phase == Phase.Distributing && MyHasMap;
         public static bool MyHasMap { get { var me = Board.FirstOrDefault(x => x.Id == Net.MyId); return me != null && me.State == PState.HasMap; } }
+
+        /// <summary>레벨 안에서 준비를 눌렀는지</summary>
+        public static bool GameReady;
+        /// <summary>레벨 안 준비 인원 (방장이 보내준 순위표 기준)</summary>
+        public static int GameReadyCount => Board.Count(e => e.State == PState.Ready || e.State == PState.Playing);
+        public static int GameReadyNeeded => Board.Count(e => e.State >= PState.Loading && e.State != PState.Cancelled && e.State != PState.Finished);
 
         public static void ToggleReady()
         {
@@ -448,6 +454,12 @@ namespace ADOFAIMulti
                     break;
                 case Phase.WaitingStart:
                     Game.KeepNoFail();
+                    // 레벨에 들어온 뒤 아무 키나 누르면 준비 (Esc 는 일시정지용이라 제외)
+                    if (!GameReady && Input.anyKeyDown && !Input.GetKeyDown(KeyCode.Escape))
+                    {
+                        GameReady = true;
+                        Net.SendToHost(Packet.Build(Msg.Ready, w => w.Write(true)));
+                    }
                     break;
                 case Phase.Distributing:
                     if (Input.GetKeyDown(KeyCode.F5)) ToggleReady();
@@ -562,6 +574,7 @@ namespace ADOFAIMulti
                 {
                     bool rd = r.ReadBoolean();
                     if (e != null && e.State == PState.HasMap && Phase == Phase.Distributing) e.LobbyReady = rd;
+                    else if (e != null && rd && e.State == PState.Loaded) e.State = PState.Ready;   // 레벨 안에서 준비
                     break;
                 }
                 case Msg.Progress:
@@ -609,7 +622,7 @@ namespace ADOFAIMulti
                     var hash = r.ReadString();
                     if (hash != MapHash) return;
                     var path = Net.IsHost ? _hostLevelPath : MapPack.LevelPath(MapHash, MapRel);
-                    MyReady = false;
+                    MyReady = false; GameReady = false;
                     Phase = Phase.Loading; Notice = "레벨 불러오는 중...";
                     Island.PlayLevel(path, (ok, err) => { if (!ok) { Notice = err; Phase = Phase.Lobby; } });
                     break;

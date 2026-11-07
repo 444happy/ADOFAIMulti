@@ -635,12 +635,18 @@ namespace ADOFAIMulti
             string label, sub = null, icon = null; bool on = true, ghost = false; System.Action act = null;
             if (host)
             {
-                if (ShowResults && Session.Results.Count > 0 && ph != Phase.Results) { label = "한 판 더"; sub = "같은 맵으로"; icon = "refresh"; act = () => { ShowResults = false; Session.HostRedo(); }; on = !string.IsNullOrEmpty(Session.HostLevelPath); }
-                else if (ph == Phase.Lobby && Session.MapHash == null) { label = "맵 선택"; sub = "TUF · 내 컴퓨터"; icon = "search"; act = () => { _drawer = true; _drawerTab = 1; }; }
-                else if (ph == Phase.Lobby) { label = "한 판 더"; sub = "같은 맵으로"; icon = "refresh"; on = !string.IsNullOrEmpty(Session.HostLevelPath); act = Session.HostRedo; }
-                else if (ph == Phase.Packing) { label = "맵 준비 중"; sub = Session.HostFetchProgress >= 0 ? $"{Session.HostFetchProgress * 100:0}%" : "잠시만요"; on = false; }
-                else if (ph == Phase.Distributing) { label = "게임 시작"; sub = $"준비 {Session.ReadyCount}/{Session.ReadyNeeded}"; icon = "play"; on = Session.CanStart; act = Session.HostStart; }
-                else if (ph == Phase.Results) { label = "결과 발표"; sub = "지금 바로"; icon = "trophy"; act = Session.HostShowResults; }
+                // 방장은 항상 "게임 시작" (맵 고르기는 방 설정의 맵 선택 버튼)
+                string rd = $"준비 {Session.ReadyCount}/{Session.ReadyNeeded}";
+                if (ph == Phase.Results && !(ShowResults && Session.Results.Count > 0)) { label = "결과 발표"; sub = "지금 바로"; icon = "trophy"; act = Session.HostShowResults; }
+                else if (ph == Phase.Distributing) { label = "게임 시작"; sub = rd; icon = "play"; on = Session.CanStart; act = Session.HostStart; }
+                else if (ph == Phase.Packing) { label = "게임 시작"; sub = Session.HostFetchProgress >= 0 ? $"맵 준비 중 {Session.HostFetchProgress * 100:0}%" : "맵 준비 중"; icon = "play"; on = false; }
+                else if (ph == Phase.Lobby || ShowResults)
+                {
+                    // 같은 맵을 다시 보내고 준비 받기 시작 (맵이 없으면 꺼짐)
+                    label = "게임 시작"; sub = rd; icon = "play";
+                    on = Session.MapHash != null && !string.IsNullOrEmpty(Session.HostLevelPath);
+                    act = () => { ShowResults = false; Session.HostRedo(); };
+                }
                 else { label = "게임 진행 중"; on = false; }
             }
             else
@@ -839,6 +845,7 @@ namespace ADOFAIMulti
         {
             var board = Session.Board.Where(x => x.State >= PState.Loading && x.State != PState.Cancelled).ToList();
             if (board.Count == 0) board = Session.Board.ToList();
+            board = board.OrderByDescending(x => x.Stats.XAcc).ToList();   // 절대 정확도 순
             float head = LS(40), rowH = LS(40);
             var box = new Rect(r.x, r.y, r.width, Mathf.Min(r.height, head + board.Count * rowH + LS(8)));
             LBox(box, e.Fill, e.Stroke, e.Radius);
@@ -872,7 +879,7 @@ namespace ADOFAIMulti
                 GUI.Label(new Rect(x, row.y, row.xMax - x - accW - LS(8), row.height - LS(4)), Trim(en.Name, 10), Label(fs, me ? C_txt : A(e.Color, 0.92f), me ? FontStyle.Bold : FontStyle.Normal));
                 var ar = new Rect(row.xMax - accW - LS(8), row.y, accW, row.height - LS(4));
                 if (fin) Icons.Draw(new Rect(ar.x - LS(14), ar.center.y - LS(7), LS(14), LS(14)), "check", C_ok);
-                GUI.Label(ar, $"{en.Stats.Acc * 100:0.00}%", Label(fs, me ? C_acc : e.Color, FontStyle.Bold, TextAnchor.MiddleRight));
+                GUI.Label(ar, $"{en.Stats.XAcc * 100:0.00}%", Label(fs, me ? C_acc : e.Color, FontStyle.Bold, TextAnchor.MiddleRight));
                 // 진행 막대
                 var pr = new Rect(x, row.yMax - LS(7), row.xMax - x - LS(8), Mathf.Max(1, LS(2)));
                 Fill(pr, A(Color.white, 0.08f));
@@ -922,7 +929,7 @@ namespace ADOFAIMulti
             DrawLayout(s, false);
             _lBlocked = false;
             if (ph == Phase.WaitingStart)
-                Banner("모두 들어오면 바로 시작해요...");
+                Banner(Session.GameReady ? $"준비 완료  {Session.GameReadyCount}/{Session.GameReadyNeeded}" : $"아무 키나 눌러 준비  {Session.GameReadyCount}/{Session.GameReadyNeeded}");
             else if (ph == Phase.Countdown && !s.Els.Any(e => e.Func == "카운트다운"))
             {
                 int n = Mathf.CeilToInt(Session.CountdownLeft);

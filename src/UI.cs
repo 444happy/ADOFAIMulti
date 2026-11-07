@@ -788,7 +788,7 @@ namespace ADOFAIMulti
                 case PState.Cancelled: return "관전";
                 case PState.HasMap: if (host) { c = C_acc; return "맵 준비됨"; } if (e.LobbyReady) { c = C_ok; return "준비 완료"; } c = C_gold; return "준비 전";
                 case PState.Loading: c = C_ice; return "입장 중";
-                case PState.Loaded: c = C_gold; return "카운트다운 대기";
+                case PState.Loaded: c = C_gold; return "준비 전";
                 case PState.Ready: c = C_ok; return "준비 완료";
                 case PState.Playing: c = C_ice; return $"플레이 중  {e.Stats.Progress * 100:0}%";
                 case PState.Finished: c = C_ok; return $"완주  {e.Stats.Acc * 100:0.00}%";
@@ -1003,54 +1003,34 @@ namespace ADOFAIMulti
             return c;
         }
 
+        // 최종 순위: 절대 정확도(X정확도) 순으로 나열만
         static void ResultsHeader()
         {
             var row = GUILayoutUtility.GetRect(100, 30, GUILayout.ExpandWidth(true));
-            var c = Cols(row);
             var st = Label(12, A(C_sub, 0.85f), FontStyle.Bold);
-            var str = Label(12, A(C_sub, 0.85f), FontStyle.Bold, TextAnchor.MiddleRight);
-            GUI.Label(new Rect(c.rank, row.y, 40, row.height), "#", st);
-            GUI.Label(new Rect(c.name, row.y, c.nameW, row.height), "플레이어", st);
-            GUI.Label(new Rect(c.acc, row.y, 120, row.height), "정확도", str);
-            GUI.Label(new Rect(c.xacc, row.y, 96, row.height), "X정확도", str);
-            GUI.Label(new Rect(c.judge, row.y, c.judgeW, row.height), "빠름  ←  판정  →  느림", Label(12, A(C_sub, 0.85f), FontStyle.Bold, TextAnchor.MiddleCenter));
-            GUI.Label(new Rect(c.miss, row.y, 56, row.height), "미스", str);
+            GUI.Label(new Rect(row.x + 8, row.y, 40, row.height), "#", st);
+            GUI.Label(new Rect(row.x + 100, row.y, 300, row.height), "플레이어", st);
+            GUI.Label(new Rect(row.xMax - 216, row.y, 200, row.height), "절대 정확도", Label(12, A(C_sub, 0.85f), FontStyle.Bold, TextAnchor.MiddleRight));
             Fill(new Rect(row.x, row.yMax - 1, row.width, 1), A(C_line, 0.9f));
         }
 
         static void ResultsTable()
         {
             int rank = 1;
-            foreach (var e in Session.Results)
+            var list = Session.Results.OrderByDescending(x => x.Stats.XAcc).ToList();
+            foreach (var e in list)
             {
                 var s = e.Stats;
                 bool me = e.Id == Net.MyId;
-                Color rc = RankColor(rank);
                 var row = GUILayoutUtility.GetRect(100, 64, GUILayout.ExpandWidth(true));
-                var c = Cols(row);
                 if (me && Event.current.type == EventType.Repaint) RoundBox(new Rect(row.x, row.y + 4, row.width, row.height - 8), A(C_acc, 0.09f), A(C_acc, 0.35f), 10);
 
-                // 순위 (1~3등은 메달)
-                var mr = new Rect(c.rank, row.y + (row.height - 32) / 2f, 32, 32);
-                if (rank <= 3) { Dot(mr.center, 16, rc); GUI.Label(mr, rank.ToString(), Label(16, Hex("14171c"), FontStyle.Bold, TextAnchor.MiddleCenter)); }
-                else GUI.Label(mr, rank.ToString(), Label(17, C_sub, FontStyle.Bold, TextAnchor.MiddleCenter));
-
+                GUI.Label(new Rect(row.x + 8, row.y, 32, row.height), rank.ToString(), Label(17, C_sub, FontStyle.Bold, TextAnchor.MiddleCenter));
                 int slot = Session.Board.FindIndex(x => x.Id == e.Id);
-                Avatar(new Rect(c.av, row.y + (row.height - 34) / 2f, 34, 34), e.Name, SlotColor(slot < 0 ? rank - 1 : slot));
-
-                bool forfeit = s.Progress < 0.999f;
-                GUI.Label(new Rect(c.name, row.y + (forfeit ? 10 : 0), c.nameW, forfeit ? 24 : row.height), Trim(e.Name, 16) + (me ? $"  <color=#{HexOf(C_acc)}><size=12>나</size></color>" : ""), Label(17, C_txt, FontStyle.Bold));
-                if (forfeit) GUI.Label(new Rect(c.name, row.y + 34, c.nameW, 20), $"미완주  ·  {s.Progress * 100:0}% 진행", Label(12, C_fire));
-
-                GUI.Label(new Rect(c.acc, row.y, 120, row.height), $"{s.Acc * 100:0.00}%", Label(20, rank == 1 ? C_gold : C_txt, FontStyle.Bold, TextAnchor.MiddleRight));
-                GUI.Label(new Rect(c.xacc, row.y, 96, row.height), $"{s.XAcc * 100:0.00}%", Label(15, C_sub, FontStyle.Normal, TextAnchor.MiddleRight));
-
-                JudgeBar(new Rect(c.judge, row.y + 18, c.judgeW, 8), s);
-                GUI.Label(new Rect(c.judge, row.y + 30, c.judgeW, 20), JudgeNums(s), Label(12, C_sub, FontStyle.Normal, TextAnchor.MiddleCenter));
-
-                int miss = s.Miss + s.Overload;
-                GUI.Label(new Rect(c.miss, row.y, 56, row.height), miss.ToString(), Label(17, miss > 0 ? J_too : A(C_sub, 0.6f), FontStyle.Bold, TextAnchor.MiddleRight));
-                if (rank < Session.Results.Count) Fill(new Rect(row.x + 8, row.yMax - 1, row.width - 16, 1), A(C_line, 0.6f));
+                Avatar(new Rect(row.x + 56, row.y + (row.height - 34) / 2f, 34, 34), e.Name, SlotColor(slot < 0 ? rank - 1 : slot));
+                GUI.Label(new Rect(row.x + 100, row.y, row.width - 340, row.height), Trim(e.Name, 16) + (me ? $"  <color=#{HexOf(C_acc)}><size=12>나</size></color>" : ""), Label(17, C_txt, FontStyle.Bold));
+                GUI.Label(new Rect(row.xMax - 216, row.y, 200, row.height), $"{s.XAcc * 100:0.00}%", Label(20, C_txt, FontStyle.Bold, TextAnchor.MiddleRight));
+                if (rank < list.Count) Fill(new Rect(row.x + 8, row.yMax - 1, row.width - 16, 1), A(C_line, 0.6f));
                 rank++;
             }
         }
@@ -1602,7 +1582,7 @@ namespace ADOFAIMulti
         static void DrawInGame()
         {
             var ph = Session.Phase;
-            var board = Session.Board.Where(e => e.State >= PState.Loading && e.State != PState.Cancelled).ToList();
+            var board = Session.Board.Where(e => e.State >= PState.Loading && e.State != PState.Cancelled).OrderByDescending(e => e.Stats.XAcc).ToList();
             float rowH = 32, w = 264;
             var box = new Rect(24 * Screen.height / 1080f, 24 * Screen.height / 1080f, w, 36 + board.Count * rowH);
             GUI.color = A(Color.white, 0.94f);
@@ -1619,12 +1599,12 @@ namespace ADOFAIMulti
                 GUI.Label(new Rect(box.x + 14, ry, 22, rowH - 4), (i + 1).ToString(), Label(15, i == 0 ? C_gold : C_sub, FontStyle.Bold));
                 Dot(new Vector2(box.x + 44, ry + (rowH - 4) / 2f), 5, SlotColor(slot < 0 ? i : slot));
                 GUI.Label(new Rect(box.x + 56, ry, 112, rowH - 4), Trim(e.Name, 8) + (e.State == PState.Finished ? "  <size=11>완주</size>" : ""), Label(15, me ? C_acc : C_txt, me ? FontStyle.Bold : FontStyle.Normal));
-                GUI.Label(new Rect(box.x + 160, ry, 92, rowH - 4), $"{e.Stats.Acc * 100:0.00}%", Label(15, me ? C_acc : C_txt, FontStyle.Bold, TextAnchor.MiddleRight));
+                GUI.Label(new Rect(box.x + 160, ry, 92, rowH - 4), $"{e.Stats.XAcc * 100:0.00}%", Label(15, me ? C_acc : C_txt, FontStyle.Bold, TextAnchor.MiddleRight));
                 Fill(new Rect(box.x + 56, ry + rowH - 8, (w - 72) * Mathf.Clamp01(e.Stats.Progress), 2), A(SlotColor(slot < 0 ? i : slot), 0.7f));
             }
 
             if (ph == Phase.WaitingStart)
-                Banner("모두 들어오면 바로 시작해요...");
+                Banner(Session.GameReady ? $"준비 완료  {Session.GameReadyCount}/{Session.GameReadyNeeded}" : $"아무 키나 눌러 준비  {Session.GameReadyCount}/{Session.GameReadyNeeded}");
             else if (ph == Phase.Countdown)
             {
                 int n = Mathf.CeilToInt(Session.CountdownLeft);

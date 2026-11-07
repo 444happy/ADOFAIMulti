@@ -1,7 +1,7 @@
 {
-  "Version": "0.21.2",
+  "Version": "0.22.0",
   "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
   "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
-  "Sha256": "95397e969623359501f78725042cdef7bee3392370c5561d196533fba042ed8c",
-  "Notes": "팝업 버튼 크기 통일, 맵 선택 버튼 상시 표시, 게임 시작에 준비 n/n"
+  "Sha256": "24972187701854dbd12120b49f0f0c7026515ef1d19f36d11723f0db7d16bb5e",
+  "Notes": "레벨 안에서 아무 키로 준비, 순위를 절대 정확도로, 게임 시작 버튼 상시·주황색, 한 판 더 삭제"
 }
