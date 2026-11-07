@@ -52,6 +52,14 @@ namespace ADOFAIMulti
         {
             get
             {
+                if (!string.IsNullOrEmpty(Profile.Nick)) return Profile.Nick;
+                return DefaultName;
+            }
+        }
+        public static string DefaultName
+        {
+            get
+            {
                 try { if (SteamClient.IsValid && !string.IsNullOrEmpty(SteamClient.Name)) return SteamClient.Name; } catch { }
                 return Environment.UserName;
             }

@@ -1,7 +1,7 @@
 {
-  "Version": "0.12.0",
+  "Version": "0.13.0",
   "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
   "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
-  "Sha256": "94b185a5ee1b86912be5bf79d296206e263d05e543c98cbb2c1a8419b69af959",
-  "Notes": "TUF 맵 고르기 개편: 난이도 범위·특수 난이도·정렬(클리어/좋아요/BPM 등)·난이도 아이콘"
+  "Sha256": "35f7034bb55707d8b4803a0d385cf36d963996da89e97b48efbdc52f09241937",
+  "Notes": "UI 설계판 반영: 입구 카드 압축, 프로필(닉네임), 로비 단계 표시 제거, 인게임 순위표 왼쪽 위"
 }

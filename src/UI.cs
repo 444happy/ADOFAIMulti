@@ -188,7 +188,7 @@ namespace ADOFAIMulti
             if (Island.Cover > 0.001f) DrawCover();
         }
 
-        static GUIStyle S_cardMe, S_cta, S_ctaGhost, S_pill, S_title, S_stepOn, S_stepOff, S_empty, S_iconBtn;
+        static GUIStyle S_cta40, S_field40, S_cardMe, S_cta, S_ctaGhost, S_pill, S_title, S_stepOn, S_stepOff, S_empty, S_iconBtn;
         static int _extraVer = -1;
 
         static void ExtraStyles()
@@ -196,6 +196,8 @@ namespace ADOFAIMulti
             _extraVer = _builtVer;
             S_cardMe = new GUIStyle(S_card); S_cardMe.normal.background = T_cardHi;
             S_cta = new GUIStyle(S_btnAcc) { fontSize = 19, fixedHeight = 58 };
+            S_cta40 = new GUIStyle(S_cta) { fontSize = 17, fixedHeight = 40, padding = new RectOffset(12, 12, 4, 4) };
+            S_field40 = new GUIStyle(S_field) { fixedHeight = 40, fontSize = 20, fontStyle = FontStyle.Bold };
             S_ctaGhost = new GUIStyle(S_btn) { fontSize = 17, fixedHeight = 58 };
             S_pill = new GUIStyle(Label(12, C_txt, FontStyle.Bold, TextAnchor.MiddleCenter)) { padding = new RectOffset(9, 9, 2, 2), border = new RectOffset(9, 9, 9, 9) };
             S_title = Label(38, C_txt, FontStyle.Bold);
@@ -206,7 +208,8 @@ namespace ADOFAIMulti
             S_iconBtn = new GUIStyle(S_btn) { fixedHeight = 36, fontSize = 14, padding = new RectOffset(14, 14, 4, 4) };
         }
 
-        static bool _drawer, _settings, _confirmLeave;
+        static bool _drawer, _settings, _confirmLeave, _profile;
+        static string _nickEdit = "";
         static string _joinId = "", _mapPath = "", _search = "";
         static Vector2 _sMaps, _sRes;
 
@@ -285,6 +288,7 @@ namespace ADOFAIMulti
             {
                 if (_confirmLeave) _confirmLeave = false;
                 else if (_settings) _settings = false;
+                else if (_profile) _profile = false;
                 else if (_drawer) _drawer = false;
                 else if (ShowResults && Session.Results.Count > 0 && Session.Phase != Phase.Results) ShowResults = false;
                 else AskLeave();
@@ -309,6 +313,7 @@ namespace ADOFAIMulti
 
             if (_drawer) DrawMapDrawer(W, H);
             if (_settings) DrawSettings(W, H);
+            if (_profile) DrawProfile(W, H);
             if (_confirmLeave) DrawConfirm();
         }
 
@@ -351,18 +356,11 @@ namespace ADOFAIMulti
             Orbit(new Vector2(46, 42), 11, 7, 0.9f);
             GUI.Label(new Rect(70, 26, 260, 32), "ADOFAI <color=#" + HexOf(C_acc) + ">MULTI</color>", Label(20, C_txt, FontStyle.Bold));
 
-            if (Session.InRoom)
-            {
-                // 로고(~260px)와 오른쪽 버튼(~540px) 사이에 맞춰 배치
-                float left = 280, right = W - 28 - (Net.IsHost ? 644 : 540);
-                float sw = Mathf.Min(660, right - left);
-                if (sw >= 320) DrawStepper(new Rect(left + (right - left - sw) / 2f, 22, sw, 40));
-            }
-
             // 오른쪽 버튼들
             float x = W - 28;
             x -= 96; if (GUI.Button(new Rect(x, 24, 96, 36), "나가기", S_iconBtn)) AskLeave();
-            x -= 104; if (GUI.Button(new Rect(x, 24, 96, 36), "설정", S_iconBtn)) _settings = !_settings;
+            x -= 104; if (GUI.Button(new Rect(x, 24, 96, 36), "설정", S_iconBtn)) { _settings = !_settings; _profile = false; }
+            x -= 104; if (GUI.Button(new Rect(x, 24, 96, 36), "프로필", _profile ? S_rowOn : S_iconBtn)) { _profile = !_profile; _settings = false; _nickEdit = Profile.Nick; }
             if (Session.InRoom)
             {
                 if (Net.CanInvite) { x -= 116; if (GUI.Button(new Rect(x, 24, 108, 36), "Steam 초대", S_iconBtn)) Net.InviteOverlay(); }
@@ -469,33 +467,35 @@ namespace ADOFAIMulti
             GUILayout.EndScrollView();
             GUILayout.EndArea();
 
-            // ---- 오른쪽: 방 만들기 / 코드로 참가 ----
+            // ---- 오른쪽: 방 만들기 / 코드로 참가 (한 줄씩 압축) ----
             GUILayout.BeginArea(right);
             GUILayout.BeginVertical(S_card);
             GUILayout.Label("방 만들기", S_h2);
             GUILayout.Space(4);
-            GUILayout.Label("방 이름", S_small);
             SearchField(ref _roomName, Net.MyName + "의 방");
             if (_roomName.Length > 40) _roomName = _roomName.Substring(0, 40);
-            GUILayout.Space(6);
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("공개", _newPublic ? S_rowOn : S_row, GUILayout.Height(38))) _newPublic = true;
-            if (GUILayout.Button("비공개", !_newPublic ? S_rowOn : S_row, GUILayout.Height(38))) _newPublic = false;
-            GUILayout.EndHorizontal();
-            GUILayout.Label(_newPublic ? "공개 방 목록에 떠서 누구나 들어올 수 있어요" : "방 코드를 아는 사람만 들어올 수 있어요", S_para);
             GUILayout.Space(8);
-            if (GUILayout.Button("새 방 만들기", S_cta)) Net.CreateRoom(_newPublic, _roomName);
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("공개", _newPublic ? S_rowOn : S_row, GUILayout.Height(40), GUILayout.Width(84))) _newPublic = true;
+            if (GUILayout.Button("비공개", !_newPublic ? S_rowOn : S_row, GUILayout.Height(40), GUILayout.Width(96))) _newPublic = false;
+            GUILayout.Space(6);
+            if (GUILayout.Button("방 만들기", S_cta40, GUILayout.ExpandWidth(true))) Net.CreateRoom(_newPublic, _roomName);
+            GUILayout.EndHorizontal();
             GUILayout.EndVertical();
 
-            GUILayout.Space(10);
+            GUILayout.Space(8);
             GUILayout.BeginVertical(S_card);
             GUILayout.Label("코드로 참가", S_h2);
-            GUILayout.Label("비공개 방은 방 코드로 들어가요. Steam 초대를 수락해도 바로 들어와요.", S_para);
-            GUILayout.Space(6);
+            GUILayout.Space(4);
             GUILayout.BeginHorizontal();
-            _joinId = Net.NormalizeCode(GUILayout.TextField(_joinId, 8, new GUIStyle(S_field) { fixedHeight = 58, fontSize = 24, fontStyle = FontStyle.Bold }));
+            _joinId = Net.NormalizeCode(GUILayout.TextField(_joinId, 8, S_field40));
+            if (_joinId.Length == 0 && Event.current.type == EventType.Repaint)
+            {
+                var lr = GUILayoutUtility.GetLastRect();
+                GUI.Label(new Rect(lr.x + 16, lr.y, lr.width, lr.height), "방 코드 6자리", Label(15, A(C_sub, 0.6f)));
+            }
             GUI.enabled = Net.IsValidCode(_joinId);
-            if (GUILayout.Button("참가", S_ctaGhost, GUILayout.Width(100))) Net.Join(_joinId);
+            if (GUILayout.Button("참가", S_cta40, GUILayout.Width(110))) Net.Join(_joinId);
             GUI.enabled = true;
             GUILayout.EndHorizontal();
             GUILayout.EndVertical();
@@ -1092,6 +1092,29 @@ namespace ADOFAIMulti
         }
 
         // ---------------- 설정 팝오버 ----------------
+        static void DrawProfile(float W, float H)
+        {
+            GUI.DrawTexture(new Rect(0, 0, W, H), T_dim);
+            var r = new Rect(W - 28 - 520, 72, 520, 300);
+            if (Event.current.type == EventType.MouseDown && !r.Contains(Event.current.mousePosition)) { _profile = false; Event.current.Use(); return; }
+            GUILayout.BeginArea(r, S_card);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("프로필", Label(22, C_txt, FontStyle.Bold));
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button("닫기", S_iconBtn, GUILayout.Width(80))) _profile = false;
+            GUILayout.EndHorizontal();
+            Section("멀티에서 쓸 이름");
+            SearchField(ref _nickEdit, Net.DefaultName + " (Steam 이름)");
+            if (_nickEdit.Length > 20) _nickEdit = _nickEdit.Substring(0, 20);
+            GUILayout.Label("비워두면 Steam 이름을 써요. 바꾼 이름은 다음에 방에 들어갈 때부터 보여요.", S_para);
+            GUILayout.FlexibleSpace();
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Steam 이름으로", S_ctaGhost)) { _nickEdit = ""; Profile.Save(""); Session.Notice = "이름을 Steam 이름으로 되돌렸어요"; }
+            if (GUILayout.Button("저장", S_cta)) { Profile.Save(_nickEdit); _profile = false; Session.Notice = "이름을 " + Net.MyName + "(으)로 바꿨어요"; }
+            GUILayout.EndHorizontal();
+            GUILayout.EndArea();
+        }
+
         static void DrawSettings(float W, float H)
         {
             GUI.DrawTexture(new Rect(0, 0, W, H), T_dim);
@@ -1239,8 +1262,8 @@ namespace ADOFAIMulti
         {
             var ph = Session.Phase;
             var board = Session.Board.Where(e => e.State >= PState.Loading && e.State != PState.Cancelled).ToList();
-            float rowH = 34, w = 300, y0 = Screen.height * 0.2f;
-            var box = new Rect(12, y0, w, 34 + board.Count * rowH);
+            float rowH = 32, w = 264;
+            var box = new Rect(24 * Screen.height / 1080f, 24 * Screen.height / 1080f, w, 36 + board.Count * rowH);
             GUI.color = A(Color.white, 0.94f);
             GUI.Box(box, "", S_card);
             GUI.color = Color.white;
@@ -1254,8 +1277,8 @@ namespace ADOFAIMulti
                 if (me) Fill(new Rect(box.x + 6, ry, w - 12, rowH - 4), A(C_acc, 0.10f));
                 GUI.Label(new Rect(box.x + 14, ry, 22, rowH - 4), (i + 1).ToString(), Label(15, i == 0 ? C_gold : C_sub, FontStyle.Bold));
                 Dot(new Vector2(box.x + 44, ry + (rowH - 4) / 2f), 5, SlotColor(slot < 0 ? i : slot));
-                GUI.Label(new Rect(box.x + 56, ry, 130, rowH - 4), Trim(e.Name, 10) + (e.State == PState.Finished ? "  <size=11>완주</size>" : ""), Label(15, me ? C_acc : C_txt, me ? FontStyle.Bold : FontStyle.Normal));
-                GUI.Label(new Rect(box.x + 180, ry, 104, rowH - 4), $"{e.Stats.Acc * 100:0.00}%", Label(15, me ? C_acc : C_txt, FontStyle.Bold, TextAnchor.MiddleRight));
+                GUI.Label(new Rect(box.x + 56, ry, 112, rowH - 4), Trim(e.Name, 8) + (e.State == PState.Finished ? "  <size=11>완주</size>" : ""), Label(15, me ? C_acc : C_txt, me ? FontStyle.Bold : FontStyle.Normal));
+                GUI.Label(new Rect(box.x + 160, ry, 92, rowH - 4), $"{e.Stats.Acc * 100:0.00}%", Label(15, me ? C_acc : C_txt, FontStyle.Bold, TextAnchor.MiddleRight));
                 Fill(new Rect(box.x + 56, ry + rowH - 8, (w - 72) * Mathf.Clamp01(e.Stats.Progress), 2), A(SlotColor(slot < 0 ? i : slot), 0.7f));
             }
 
