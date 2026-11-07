@@ -239,7 +239,11 @@ namespace ADOFAIMulti
                 case "플레이어 명단": LBox(r, e.Fill, e.Stroke, e.Radius); DrawLineup(r, false); return;
                 case "맵 고르기 열기": if (host) LButton(e, r, !busy, () => { _drawer = true; _drawerTab = 1; }); return;
                 case "한 판 더": if (host && Session.MapHash != null && !string.IsNullOrEmpty(Session.HostLevelPath)) LButton(e, r, true, () => { ShowResults = false; Session.HostRedo(); }); return;
-                case "준비 (F5)": LButton(e, r, Session.Phase == Phase.WaitingStart, Session.ToggleReady, Session.MyReady ? "준비 취소" : null); return;
+                case "준비 (F5)":
+                    if (host) LButton(e, r, Session.CanStart, Session.HostStart, Session.Phase == Phase.Distributing ? $"시작  {Session.ReadyCount}/{Session.ReadyNeeded} 준비" : "시작");
+                    else LButton(e, r, Session.CanReady, Session.ToggleReady, Session.MyReady ? "준비 완료 · 취소" : null);
+                    return;
+                case "게임 시작": if (host) LButton(e, r, Session.CanStart, Session.HostStart, Session.Phase == Phase.Distributing ? $"{Tok(e.Text)}  {Session.ReadyCount}/{Session.ReadyNeeded}" : null); return;
                 case "기권": if (Session.Phase == Phase.Countdown || Session.Phase == Phase.Playing) LButton(e, r, true, Session.Forfeit); return;
                 case "맵 받기 진행률":
                 {
@@ -417,7 +421,7 @@ namespace ADOFAIMulti
             DrawLayout(s, false);
             _lBlocked = false;
             if (ph == Phase.WaitingStart)
-                Banner(Session.MyReady ? "준비 완료 · 다른 사람을 기다리는 중" : $"<color=#{HexOf(C_acc)}>F5</color>  를 눌러 준비");
+                Banner("모두 들어오면 바로 시작해요...");
             else if (ph == Phase.Countdown && !s.Els.Any(e => e.Func == "카운트다운"))
             {
                 int n = Mathf.CeilToInt(Session.CountdownLeft);

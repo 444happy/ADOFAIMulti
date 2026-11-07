@@ -599,7 +599,7 @@ namespace ADOFAIMulti
                 case PState.Downloading: c = C_acc; return $"받는 중 {e.Download * 100:0}%";
                 case PState.Paused: c = C_gold; return $"일시정지 {e.Download * 100:0}%";
                 case PState.Cancelled: return "관전";
-                case PState.HasMap: c = C_acc; return "맵 준비됨";
+                case PState.HasMap: if (e.LobbyReady || e.Id == Net.HostId) { c = C_acc; return e.Id == Net.HostId ? "방장" : "준비 완료"; } c = C_gold; return "준비 전";
                 case PState.Loading: c = C_ice; return "입장 중";
                 case PState.Loaded: c = C_gold; return "준비 전";
                 case PState.Ready: c = C_acc; return "준비 완료";
@@ -692,12 +692,12 @@ namespace ADOFAIMulti
             }
             else if (ph == Phase.Packing || ph == Phase.Distributing)
             {
-                GUILayout.Label("맵 보내는 중", S_section);
-                GUILayout.Label("모두 받으면 자동으로 레벨에 들어가요. 오래 걸리는 사람이 있으면 받은 사람끼리 먼저 시작할 수 있어요.", S_paraTxt);
+                GUILayout.Label(Session.CanStart ? "모두 준비 완료" : "준비 기다리는 중", S_section);
+                GUILayout.Label(Session.CanStart ? "시작을 누르면 모두 레벨에 들어가고 바로 카운트다운이 시작돼요." : $"모두 맵을 받고 준비를 눌러야 시작할 수 있어요.   준비 {Session.ReadyCount}/{Session.ReadyNeeded}", S_paraTxt);
                 GUILayout.FlexibleSpace();
                 GUILayout.BeginHorizontal();
-                GUI.enabled = ph == Phase.Distributing;
-                if (GUILayout.Button("받은 사람끼리 시작", S_ctaGhost)) Session.HostStartLoad();
+                GUI.enabled = Session.CanStart;
+                if (GUILayout.Button($"시작  {Session.ReadyCount}/{Session.ReadyNeeded} 준비", S_cta)) Session.HostStart();
                 GUI.enabled = true;
                 if (GUILayout.Button("다른 맵 고르기", S_ctaGhost, GUILayout.Width(220))) { _drawer = true; _drawerTab = 1; }
                 GUILayout.EndHorizontal();
@@ -736,8 +736,12 @@ namespace ADOFAIMulti
                     GUILayout.EndHorizontal();
                     return;
                 }
-                GUILayout.Label("준비 완료", S_section);
-                GUILayout.Label("맵을 다 받았어요. 다른 사람을 기다리면 자동으로 시작해요.", S_paraTxt);
+                GUILayout.Label(Session.MyReady ? "준비 완료" : "맵 받기 완료", S_section);
+                GUILayout.Label(Session.MyReady ? "방장이 시작을 누르면 바로 시작해요." : "준비를 누르세요 (F5). 모두 준비하면 방장이 시작할 수 있어요.", S_paraTxt);
+                GUILayout.FlexibleSpace();
+                GUI.enabled = Session.CanReady;
+                if (GUILayout.Button(Session.MyReady ? "준비 취소" : "준비 (F5)", Session.MyReady ? S_ctaGhost : S_cta)) Session.ToggleReady();
+                GUI.enabled = true;
                 return;
             }
             if (ph == Phase.Results)
@@ -1310,7 +1314,7 @@ namespace ADOFAIMulti
             }
 
             if (ph == Phase.WaitingStart)
-                Banner(Session.MyReady ? "준비 완료 · 다른 사람을 기다리는 중" : $"<color=#{HexOf(C_acc)}>F5</color>  를 눌러 준비");
+                Banner("모두 들어오면 바로 시작해요...");
             else if (ph == Phase.Countdown)
             {
                 int n = Mathf.CeilToInt(Session.CountdownLeft);

@@ -62,15 +62,16 @@ namespace ADOFAIMulti
         public string Name = "";
         public PState State;
         public float Download;   // 0~1
+        public bool LobbyReady;  // 로비에서 준비 눌렀는지 (맵을 받은 뒤)
         public Stats Stats = new Stats();
 
         public void Write(BinaryWriter w)
         {
-            w.Write(Id); w.Write(Name ?? ""); w.Write((byte)State); w.Write(Download); Stats.Write(w);
+            w.Write(Id); w.Write(Name ?? ""); w.Write((byte)State); w.Write(Download); w.Write(LobbyReady); Stats.Write(w);
         }
         public static Entry Read(BinaryReader r)
         {
-            return new Entry { Id = r.ReadUInt64(), Name = r.ReadString(), State = (PState)r.ReadByte(), Download = r.ReadSingle(), Stats = Stats.Read(r) };
+            return new Entry { Id = r.ReadUInt64(), Name = r.ReadString(), State = (PState)r.ReadByte(), Download = r.ReadSingle(), LobbyReady = r.ReadBoolean(), Stats = Stats.Read(r) };
         }
 
         /// <summary>정확도 → X정확도 → 미스 적은 순</summary>

@@ -135,7 +135,7 @@ namespace ADOFAIMulti
                     var info = MapBrowser.ReadInfo(levelPath);
                     MapSong = info?.Song ?? ""; MapArtist = info?.Artist ?? ""; MapAuthor = info?.Author ?? "";
                     _hostZip = p.ZipFile; _hostLevelPath = levelPath;
-                    foreach (var e in Peers.Values) { e.State = PState.Lobby; e.Download = 0; e.Stats = new Stats(); }
+                    foreach (var e in Peers.Values) { e.State = PState.Lobby; e.Download = 0; e.LobbyReady = false; e.Stats = new Stats(); }
                     Peers[Net.MyId].State = PState.HasMap;
                     Peers[Net.MyId].Download = 1;
                     Phase = Phase.Distributing;
@@ -197,7 +197,7 @@ namespace ADOFAIMulti
             MapSong = lv.Song; MapArtist = lv.Artist; MapAuthor = lv.Creator;
             MapSource = 1; MapTufId = lv.Id; MapDlUrl = lv.DlLink; MapDiff = lv.Diff; MapDiffColor = lv.DiffColor;
             _hostZip = zip; _hostLevelPath = MapPack.LevelPath(hash, rel); _lastTuf = lv;
-            foreach (var e in Peers.Values) { e.State = PState.Lobby; e.Download = 0; e.Stats = new Stats(); }
+            foreach (var e in Peers.Values) { e.State = PState.Lobby; e.Download = 0; e.LobbyReady = false; e.Stats = new Stats(); }
             Peers[Net.MyId].State = PState.HasMap; Peers[Net.MyId].Download = 1;
             Phase = Phase.Distributing;
             Notice = $"맵 배포 중 (TUF): {lv.Song}";
@@ -239,14 +239,9 @@ namespace ADOFAIMulti
 
         static void HostTick()
         {
-            // 모두 맵을 받으면 자동으로 개인 플레이 화면으로
-            if (Phase == Phase.Distributing && Peers.Count > 0 &&
-                Peers.Values.All(e => e.State == PState.HasMap || e.State == PState.Cancelled))
-                HostStartLoad();
-
-            // 모두 준비되면 GO
+            // 방장이 시작을 누르면(HostStart) 레벨에 들어가고, 모두 레벨에 들어오면 바로 카운트다운
             var parts = Participants().ToList();
-            if (Phase == Phase.WaitingStart && parts.Count > 0 && parts.All(e => e.State == PState.Ready))
+            if (Phase == Phase.WaitingStart && parts.Count > 0 && parts.All(e => e.State == PState.Loaded || e.State == PState.Ready))
             {
                 foreach (var e in parts) e.State = PState.Playing;
                 var pkt = Packet.Build(Msg.Go, w => w.Write(CountdownMs));
@@ -300,11 +295,27 @@ namespace ADOFAIMulti
         }
         public static void DlRetry() { DlCancelled = false; StartDownload(); }
 
+        /// <summary>멤버: 맵을 다 받은 뒤 로비에서 준비 / 준비 취소</summary>
+        public static bool CanReady => Net.InRoom && !Net.IsHost && Phase == Phase.Distributing && MyHasMap;
+        public static bool MyHasMap { get { var me = Board.FirstOrDefault(x => x.Id == Net.MyId); return me != null && me.State == PState.HasMap; } }
+
         public static void ToggleReady()
         {
-            if (Phase != Phase.WaitingStart) return;
+            if (!CanReady) return;
             MyReady = !MyReady;
             Net.SendToHost(Packet.Build(Msg.Ready, w => w.Write(MyReady)));
+        }
+
+        /// <summary>방장: 시작할 수 있는지 (맵을 받은 사람이 모두 준비 완료). 받는 중인 사람이 있으면 기다림</summary>
+        public static int ReadyCount => Peers.Values.Count(e => e.Id != Net.MyId && e.State == PState.HasMap && e.LobbyReady);
+        public static int ReadyNeeded => Peers.Values.Count(e => e.Id != Net.MyId && e.State != PState.Cancelled);
+        public static bool CanStart => Net.IsHost && Phase == Phase.Distributing
+            && Peers.Values.Where(e => e.Id != Net.MyId).All(e => e.State == PState.Cancelled || (e.State == PState.HasMap && e.LobbyReady));
+
+        public static void HostStart()
+        {
+            if (!CanStart) return;
+            HostStartLoad();
         }
 
         /// <summary>멤버: TUF CDN에서 직접 받기. 실패하면 방장에게서 받기로 전환</summary>
@@ -405,6 +416,8 @@ namespace ADOFAIMulti
                     break;
                 case Phase.WaitingStart:
                     Game.KeepNoFail();
+                    break;
+                case Phase.Distributing:
                     if (Input.GetKeyDown(KeyCode.F5)) ToggleReady();
                     break;
                 case Phase.Countdown:
@@ -499,7 +512,12 @@ namespace ADOFAIMulti
                     if (e != null && r.ReadString() == MapHash) { e.State = PState.HasMap; e.Download = 1; }
                     break;
                 case Msg.Loaded: if (e != null) e.State = PState.Loaded; break;
-                case Msg.Ready: if (e != null) e.State = r.ReadBoolean() ? PState.Ready : PState.Loaded; break;
+                case Msg.Ready:
+                {
+                    bool rd = r.ReadBoolean();
+                    if (e != null && e.State == PState.HasMap && Phase == Phase.Distributing) e.LobbyReady = rd;
+                    break;
+                }
                 case Msg.Progress:
                     if (e != null)
                     {
@@ -569,7 +587,7 @@ namespace ADOFAIMulti
                     UI.ShowResults = false;
                     if (Game.IsScnGame) Island.ReturnFromLevel();
                     else if (!Island.InIsland) Island.Enter();
-                    if (Net.IsHost) foreach (var e in Peers.Values) { e.State = PState.Lobby; e.Stats = new Stats(); }
+                    if (Net.IsHost) foreach (var e in Peers.Values) { e.State = PState.Lobby; e.LobbyReady = false; e.Stats = new Stats(); }
                     Notice = "로비로 돌아왔습니다";
                     break;
             }

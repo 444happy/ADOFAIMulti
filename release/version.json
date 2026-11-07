@@ -1,7 +1,7 @@
 {
-  "Version": "0.14.0",
+  "Version": "0.15.0",
   "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
   "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
-  "Sha256": "2394d1472e8b5aa771371269517c323179ec14a09380efd3f67434f2342435b9",
-  "Notes": "UI 설계판 배치를 게임에 그대로 적용 (설계 바뀌면 자동 반영)"
+  "Sha256": "d17d0c0cb6f90a7bab9affcc4515be1ca9007aa70063ac5cc7ab4217da37c906",
+  "Notes": "모두 준비 → 방장이 시작 (자동 시작 제거)"
 }
