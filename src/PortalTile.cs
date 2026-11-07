@@ -55,7 +55,7 @@ namespace ADOFAIMulti
 
         static void Create()
         {
-            var floors = UnityEngine.Object.FindObjectsOfType<scrFloor>().Where(f => f != null && f.gameObject.activeInHierarchy).ToList();
+            var floors = UnityEngine.Object.FindObjectsByType<scrFloor>(FindObjectsSortMode.InstanceID).Where(f => f != null && f.gameObject.activeInHierarchy).ToList();
             if (floors.Count < 3) return;   // 아직 메뉴가 덜 만들어짐 → 다음 프레임
 
             // 원본: 커스텀 레벨 포탈 → 없으면 아무 포탈
