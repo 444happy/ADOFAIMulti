@@ -299,7 +299,7 @@
     "y": 400,
     "w": 400,
     "h": 40,
-    "text": "방 코드 6자리",
+    "text": "참가 코드 6자리",
     "func": "방 코드로 참가"
    },
    {
@@ -345,7 +345,7 @@
     "func": "프로필 열기"
    }
   ],
-  "updatedAt": 1794041000000,
+  "updatedAt": 1794042000000,
   "handoff": ""
  },
  {
@@ -614,6 +614,90 @@
     "opacity": 1,
     "note": "",
     "name": "",
+    "fill": "transparent",
+    "stroke": "transparent",
+    "color": "#8a93a3",
+    "size": 18,
+    "weight": 500,
+    "radius": 0,
+    "align": "left",
+    "id": "jlab",
+    "type": "text",
+    "x": 920,
+    "y": 334,
+    "w": 80,
+    "h": 40,
+    "text": "판정",
+    "func": "(없음)"
+   },
+   {
+    "font": "game",
+    "opacity": 1,
+    "note": "",
+    "name": "",
+    "fill": "#232a33",
+    "stroke": "#3a4452",
+    "color": "#e8ecf1",
+    "size": 16,
+    "weight": 500,
+    "radius": 20,
+    "align": "center",
+    "id": "jd0",
+    "type": "chip",
+    "x": 1000,
+    "y": 334,
+    "w": 108,
+    "h": 40,
+    "text": "느슨함",
+    "func": "판정 설정"
+   },
+   {
+    "font": "game",
+    "opacity": 1,
+    "note": "",
+    "name": "",
+    "fill": "#232a33",
+    "stroke": "#3a4452",
+    "color": "#e8ecf1",
+    "size": 16,
+    "weight": 500,
+    "radius": 20,
+    "align": "center",
+    "id": "jd1",
+    "type": "chip",
+    "x": 1116,
+    "y": 334,
+    "w": 108,
+    "h": 40,
+    "text": "보통",
+    "func": "판정 설정"
+   },
+   {
+    "font": "game",
+    "opacity": 1,
+    "note": "",
+    "name": "",
+    "fill": "#232a33",
+    "stroke": "#3a4452",
+    "color": "#e8ecf1",
+    "size": 16,
+    "weight": 500,
+    "radius": 20,
+    "align": "center",
+    "id": "jd2",
+    "type": "chip",
+    "x": 1232,
+    "y": 334,
+    "w": 108,
+    "h": 40,
+    "text": "엄격함",
+    "func": "판정 설정"
+   },
+   {
+    "font": "game",
+    "opacity": 1,
+    "note": "",
+    "name": "",
     "fill": "#232a33",
     "stroke": "transparent",
     "color": "#5ab8ff",
@@ -648,8 +732,8 @@
     "y": 560,
     "w": 360,
     "h": 72,
-    "text": "맵 고르기",
-    "func": "맵 고르기 열기"
+    "text": "맵 선택",
+    "func": "맵 선택 열기"
    },
    {
     "font": "game",
@@ -694,7 +778,7 @@
     "func": "알림 메시지"
    }
   ],
-  "updatedAt": 1794041000000,
+  "updatedAt": 1794042000000,
   "handoff": ""
  },
  {
@@ -766,7 +850,7 @@
     "y": 28,
     "w": 300,
     "h": 48,
-    "text": "맵 고르기",
+    "text": "맵 선택",
     "func": "(없음)"
    },
    {
@@ -1043,7 +1127,7 @@
     "func": "이 맵으로 시작"
    }
   ],
-  "updatedAt": 1794041000000,
+  "updatedAt": 1794042000000,
   "handoff": ""
  },
  {
@@ -1119,7 +1203,7 @@
     "func": "카운트다운"
    }
   ],
-  "updatedAt": 1794041000000,
+  "updatedAt": 1794042000000,
   "handoff": ""
  },
  {
@@ -1300,7 +1384,7 @@
     "func": "로비로 돌아가기"
    }
   ],
-  "updatedAt": 1794041000000,
+  "updatedAt": 1794042000000,
   "handoff": ""
  }
 ]

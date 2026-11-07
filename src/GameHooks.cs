@@ -16,6 +16,7 @@ namespace ADOFAIMulti
         public static bool WonSeen;
 
         static bool? _savedNoFail;
+        static Difficulty? _savedDiff;
 
         /// <summary>멀티 로비가 메인 메뉴 위에 떠 있는 상태</summary>
         public static bool MenuFrozen => (Island.InIsland || Island.Busy) && !IsScnGame;
@@ -53,6 +54,8 @@ namespace ADOFAIMulti
             var ctrl = ADOBase.controller;
             if (ctrl == null) { error = "메인 메뉴나 커스텀 레벨 화면에서 다시 시도해 주세요"; return false; }
             if (_savedNoFail == null) _savedNoFail = GCS.useNoFail;
+            if (_savedDiff == null) _savedDiff = GCS.difficulty;
+            GCS.difficulty = (Difficulty)Session.Judge;
             GCS.useNoFail = true;
             GCS.speedTrialMode = false;
             GCS.practiceMode = false;
@@ -68,6 +71,7 @@ namespace ADOFAIMulti
         public static void KeepNoFail()
         {
             try { var c = ADOBase.controller; if (c != null) c.noFail = true; } catch { }
+            try { if (GCS.difficulty != (Difficulty)Session.Judge) GCS.difficulty = (Difficulty)Session.Judge; } catch { }
         }
 
         public static void RestoreSettings()
@@ -75,6 +79,7 @@ namespace ADOFAIMulti
             GateClosed = false;
             AutoStartOnce = false;
             if (_savedNoFail.HasValue) { GCS.useNoFail = _savedNoFail.Value; _savedNoFail = null; }
+            if (_savedDiff.HasValue) { try { GCS.difficulty = _savedDiff.Value; } catch { } _savedDiff = null; }
         }
 
         public static bool IsWon()

@@ -20,15 +20,15 @@ namespace ADOFAIMulti
         /// <summary>레벨 로딩~결과 대기까지 (ESC/재시작 막는 구간)</summary>
         public static bool InMatch => Phase == Phase.Loading || Phase == Phase.WaitingStart || Phase == Phase.Countdown || Phase == Phase.Playing || Phase == Phase.Results;
 
-        static string _pendingJoin, _pendingPw;
+        static string _pendingJoin, _pendingPw, _pendingInv;
         /// <summary>초대 수락/코드 입력. 레벨 플레이 중이면 메뉴로 나왔을 때 입장</summary>
-        public static void RequestJoin(string code, string password = "")
+        public static void RequestJoin(string code, string password = "", string invite = "")
         {
-            if (Game.IsScnGame) { _pendingJoin = code; _pendingPw = password; Notice = "레벨을 나가면 초대받은 방에 들어갑니다"; return; }
+            if (Game.IsScnGame) { _pendingJoin = code; _pendingPw = password; _pendingInv = invite; Notice = "레벨을 나가면 초대받은 방에 들어갑니다"; return; }
             if (Updater.UpdateRequired) { Island.Enter(); Notice = "새 버전으로 업데이트한 뒤 들어갈 수 있어요"; return; }
             if (InRoom) LeaveRoom();
             Island.Enter();
-            Net.Join(code, password);
+            Net.Join(code, password, invite);
         }
 
         /// <summary>Ctrl+Shift+Q: 기권하고 로비로</summary>
@@ -76,6 +76,15 @@ namespace ADOFAIMulti
 
         // 진행
         public static bool MyReady;
+        public static byte Judge = 1;                              // 판정: 0 느슨함 1 보통 2 엄격함 (방장이 정함)
+        public static readonly string[] JudgeNames = { "느슨함", "보통", "엄격함" };
+        public static void HostSetJudge(int j)
+        {
+            if (!Net.IsHost || InMatch && Phase != Phase.Results) return;
+            Judge = (byte)Mathf.Clamp(j, 0, 2);
+            Net.Broadcast(Packet.Build(Msg.Settings, w => w.Write(Judge)));
+            Notice = "판정: " + JudgeNames[Judge];
+        }
         static bool _resultsSent;
         static float _goAt, _nextProgress, _nextBoard, _notInGameSince = -1;
         public static float CountdownLeft => Mathf.Max(0, _goAt - Time.realtimeSinceStartup);
@@ -378,7 +387,7 @@ namespace ADOFAIMulti
         // ===================== 매 프레임 =====================
         public static void Update()
         {
-            if (_pendingJoin != null && !Game.IsScnGame) { var code = _pendingJoin; _pendingJoin = null; RequestJoin(code, _pendingPw); }
+            if (_pendingJoin != null && !Game.IsScnGame) { var code = _pendingJoin; _pendingJoin = null; RequestJoin(code, _pendingPw, _pendingInv); }
             if (!InRoom) return;
             if (Net.IsHost)
             {
@@ -487,6 +496,7 @@ namespace ADOFAIMulti
                     if (Phase >= Phase.Loading) { Net.Send(from, Packet.Build(Msg.Reject, w => w.Write("게임이 진행 중입니다. 끝나고 다시 들어와 주세요"))); return; }
                     Peers[from] = new Entry { Id = from, Name = name, State = PState.Lobby };
                     Net.Send(from, Packet.Build(Msg.Welcome));
+                    Net.Send(from, Packet.Build(Msg.Settings, w => w.Write(Judge)));
                     if (MapHash != null) Net.Send(from, OfferPacket());
                     break;
                 }
@@ -533,6 +543,7 @@ namespace ADOFAIMulti
             switch (type)
             {
                 case Msg.Welcome: Notice = "방에 들어왔습니다"; break;
+                case Msg.Settings: if (!Net.IsHost) Judge = r.ReadByte(); break;
                 case Msg.Reject: Notice = r.ReadString(); LeaveRoom(); break;
                 case Msg.MapOffer:
                     MapHash = r.ReadString(); MapSize = r.ReadInt64(); MapRel = r.ReadString(); MapTitle = r.ReadString(); MapSong = r.ReadString(); MapArtist = r.ReadString(); MapAuthor = r.ReadString();

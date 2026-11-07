@@ -4,6 +4,7 @@
 //   텍스트 프레임: 제어 JSON. "ping" → "pong". 방장이 {"t":"meta",...} 를 보내면 방 정보 갱신
 // - 공개 방 목록 = Lobby(Durable Object) 하나. Room 이 생성/인원/맵/단계 변화 때 알려준다.
 //   GET /rooms → 공개 방 목록 (3초 캐시)
+//   GET /invite/XXXXXX → 방장이 방 안에서 만든 참가 코드 → 방 (코드로 들어오면 비밀번호 없이 입장)
 // - WebSocket Hibernation API 사용 → 조용할 때 과금/메모리 거의 0
 
 const CODE_RE = /^[A-Z0-9]{4,8}$/;
@@ -32,6 +33,12 @@ export default {
       res = new Response(body, { headers: { "content-type": "application/json; charset=utf-8", "access-control-allow-origin": "*", "cache-control": "public, max-age=3" } });
       ctx.waitUntil(cache.put(key, res.clone()));
       return res;
+    }
+
+    const iv = url.pathname.match(/^\/invite\/([A-Za-z0-9]{4,8})$/);
+    if (iv && req.method === "GET") {
+      const lobby = env.LOBBY.get(env.LOBBY.idFromName("main"));
+      return lobby.fetch("https://lobby/invget?c=" + iv[1].toUpperCase());
     }
 
     const m = url.pathname.match(/^\/room\/([A-Za-z0-9]+)$/);
@@ -115,7 +122,9 @@ export class Room {
     if (list.length >= MAX_MEMBERS) return reject("full", "방이 꽉 찼어요 (최대 8명)");
     if (!host) {
       const meta = (await this.state.storage.get("meta")) || {};
-      if (meta.pwHash && (await pwHash(code, url.searchParams.get("pw") || "")) !== meta.pwHash)
+      const inv = (url.searchParams.get("inv") || "").toUpperCase();
+      const viaInvite = inv && meta.invite && inv === meta.invite;
+      if (meta.pwHash && !viaInvite && (await pwHash(code, url.searchParams.get("pw") || "")) !== meta.pwHash)
         return reject("bad_pw", url.searchParams.get("pw") ? "비밀번호가 틀렸어요" : "비밀번호가 필요한 방이에요");
     }
     if (list.some((a) => a.id === id)) return reject("dup", "이미 이 방에 접속해 있어요");
@@ -152,6 +161,18 @@ export class Room {
       const a = ws.deserializeAttachment();
       if (!a || !a.host) return;
       let j; try { j = JSON.parse(msg); } catch { return; }
+      if (j.t === "invite") {
+        const meta = (await this.state.storage.get("meta")) || {};
+        if (!meta.invite) {
+          const AL = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+          const rnd = crypto.getRandomValues(new Uint8Array(6));
+          meta.invite = [...rnd].map((b) => AL[b % AL.length]).join("");
+          await this.state.storage.put("meta", meta);
+          try { await this.lobby().fetch("https://lobby/invset", { method: "POST", body: JSON.stringify({ inv: meta.invite, room: meta.code }) }); } catch {}
+        }
+        ws.send(JSON.stringify({ t: "invite", code: meta.invite }));
+        return;
+      }
       if (j.t === "meta") {
         const meta = (await this.state.storage.get("meta")) || {};
         for (const k of ["public", "name", "phase", "song", "artist"]) if (k in j) meta[k] = j[k];
@@ -188,7 +209,11 @@ export class Room {
       try { o.send(JSON.stringify({ t: "left", id: a.id, host: a.host })); } catch {}
       if (a.host) { try { o.close(4001, "host_left"); } catch {} }   // 방장이 나가면 방 닫힘
     }
-    if (a.host) { await this.unpublish(); await this.state.storage.delete("meta"); }
+    if (a.host) {
+      const meta = (await this.state.storage.get("meta")) || {};
+      if (meta.invite) { try { await this.lobby().fetch("https://lobby/invdel", { method: "POST", body: JSON.stringify({ inv: meta.invite }) }); } catch {} }
+      await this.unpublish(); await this.state.storage.delete("meta");
+    }
     else await this.publish();
   }
 }
@@ -205,6 +230,7 @@ export class Lobby {
       const all = await this.state.storage.list();
       const now = Date.now(), rooms = [], stale = [];
       for (const [k, v] of all) {
+        if (k.startsWith("inv:")) continue;
         if (now - v.updated > STALE_MS) stale.push(k); else rooms.push(v);
       }
       if (stale.length) await this.state.storage.delete(stale);
@@ -216,6 +242,21 @@ export class Lobby {
       if (!e.code) return json({ ok: false });
       e.updated = Date.now();
       await this.state.storage.put(e.code, e);
+      return json({ ok: true });
+    }
+    if (url.pathname === "/invget") {
+      const v = await this.state.storage.get("inv:" + (url.searchParams.get("c") || ""));
+      if (!v || Date.now() - v.updated > 24 * 3600_000) return json({ ok: false, msg: "없는 코드예요. 방장에게 코드를 다시 받아주세요" });
+      return json({ ok: true, room: v.room, inv: url.searchParams.get("c") });
+    }
+    if (req.method === "POST" && url.pathname === "/invset") {
+      const e = await req.json();
+      if (e.inv && e.room) await this.state.storage.put("inv:" + e.inv, { room: e.room, updated: Date.now() });
+      return json({ ok: true });
+    }
+    if (req.method === "POST" && url.pathname === "/invdel") {
+      const e = await req.json();
+      if (e.inv) await this.state.storage.delete("inv:" + e.inv);
       return json({ ok: true });
     }
     if (req.method === "POST" && url.pathname === "/remove") {

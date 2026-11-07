@@ -224,6 +224,67 @@ namespace ADOFAIMulti
             else Net.Join(rm.Code);
         }
 
+        static bool _pwShowCreate, _pwShowPrompt;
+        static Texture2D _eyeOpen, _eyeShut;
+        static Texture2D EyeTex(bool open)
+        {
+            ref Texture2D t = ref (open ? ref _eyeOpen : ref _eyeShut);
+            if (t != null) return t;
+            const int n = 48;
+            t = new Texture2D(n, n, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, hideFlags = HideFlags.HideAndDontSave };
+            for (int y = 0; y < n; y++)
+                for (int x = 0; x < n; x++)
+                {
+                    float u = (x + 0.5f) / n * 2 - 1, v = (y + 0.5f) / n * 2 - 1;
+                    float lid = 0.5f * (1 - u * u);                       // 눈꺼풀 곡선
+                    float dLid = Mathf.Abs(Mathf.Abs(v) - lid);
+                    float a = Mathf.Abs(u) < 0.98f ? Mathf.Clamp01(1 - (dLid - 0.035f) * 24) : 0;
+                    float pr = Mathf.Sqrt(u * u + v * v);
+                    a = Mathf.Max(a, Mathf.Clamp01(1 - (pr - 0.2f) * 24));  // 눈동자
+                    if (!open) a = Mathf.Max(a, Mathf.Clamp01(1 - (Mathf.Abs(u + v) / 1.414f - 0.04f) * 24) * (Mathf.Abs(u) < 0.8f ? 1 : 0));
+                    t.SetPixel(x, y, new Color(1, 1, 1, a));
+                }
+            t.Apply();
+            return t;
+        }
+
+        /// <summary>오른쪽 끝 눈 버튼 (누르면 비밀번호 보이기/숨기기). 버튼 영역을 돌려줌</summary>
+        static Rect EyeButton(Rect field, ref bool show)
+        {
+            float s = Mathf.Min(field.height, 40);
+            var r = new Rect(field.xMax - s - 4, field.y + (field.height - s) / 2f, s, s);
+            var o = GUI.color; GUI.color = A(C_sub, r.Contains(Event.current.mousePosition) ? 1f : 0.75f);
+            GUI.DrawTexture(new Rect(r.x + s * 0.2f, r.y + s * 0.2f, s * 0.6f, s * 0.6f), EyeTex(show));
+            GUI.color = o;
+            if (GUI.Button(r, GUIContent.none, GUIStyle.none)) show = !show;
+            return r;
+        }
+
+        static string InviteLabel() => !string.IsNullOrEmpty(Net.InviteCode) ? "코드  <b>" + Net.InviteCode + "</b>  복사" : Net.InviteBusy ? "코드 만드는 중..." : "참가 코드 만들기";
+        static void InviteClick()
+        {
+            if (!string.IsNullOrEmpty(Net.InviteCode)) { GUIUtility.systemCopyBuffer = Net.InviteCode; Session.Notice = "참가 코드를 복사했어요"; }
+            else Net.RequestInvite();
+        }
+
+        static bool _layoutMapBtn;     // 설계 배치에 맵 선택 버튼이 따로 있으면 알림 칸에서는 숨김
+
+        /// <summary>판정 설정 (방장만 바꿈)</summary>
+        static void JudgeRow()
+        {
+            GUILayout.Space(6);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("판정", S_sub, GUILayout.Width(50));
+            for (int i = 0; i < 3; i++)
+            {
+                var o = GUI.enabled; GUI.enabled = Net.IsHost && o;
+                if (GUILayout.Button(Session.JudgeNames[i], Session.Judge == i ? S_rowOn : S_row, GUILayout.Width(96))) Session.HostSetJudge(i);
+                GUI.enabled = o;
+            }
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+        }
+
         static void DrawPasswordPrompt()
         {
             float W = Screen.width, H = Screen.height;
@@ -233,8 +294,11 @@ namespace ADOFAIMulti
             GUILayout.Label(_pwMode == 2 ? "비공개 방 비밀번호" : "비밀번호가 걸린 방", Label(22, C_txt, FontStyle.Bold));
             GUILayout.Label(_pwMode == 2 ? "친구에게 알려줄 비밀번호를 정해주세요." : (_pwMsg.Length > 0 ? Esc(_pwMsg) : "방장에게 받은 비밀번호를 입력하세요."), _pwMsg.Length > 0 && _pwMode == 1 ? Label(14, C_fire) : S_para);
             GUILayout.Space(6);
+            var fr = GUILayoutUtility.GetRect(100, 40, GUILayout.ExpandWidth(true));
+            EyeButton(fr, ref _pwShowPrompt);
             GUI.SetNextControlName("pwField");
-            _pwEdit = GUILayout.PasswordField(_pwEdit ?? "", '*', 32, S_field);
+            var fr2 = new Rect(fr.x, fr.y, fr.width - 44, fr.height);
+            _pwEdit = _pwShowPrompt ? GUI.TextField(fr2, _pwEdit ?? "", 32, S_field) : GUI.PasswordField(fr2, _pwEdit ?? "", '*', 32, S_field);
             if (Event.current.type == EventType.Repaint && GUI.GetNameOfFocusedControl() != "pwField") GUI.FocusControl("pwField");
             bool enter = Event.current.type == EventType.KeyDown && (Event.current.keyCode == KeyCode.Return || Event.current.keyCode == KeyCode.KeypadEnter);
             GUILayout.FlexibleSpace();
@@ -422,11 +486,10 @@ namespace ADOFAIMulti
                     if (GUI.Button(new Rect(x, 24, 96, 36), Net.RoomPublic ? "공개" : "비공개", Net.RoomPublic ? S_rowOn : S_iconBtn))
                     { if (Net.RoomPublic) AskSetPassword(); else { Net.SetPublic(true); Session.Notice = "공개 방이 됐어요"; } }
                 }
-                if (!string.IsNullOrEmpty(Net.RoomCode))
+                if (Net.IsHost || !string.IsNullOrEmpty(Net.InviteCode))
                 {
                     x -= 196;
-                    if (GUI.Button(new Rect(x, 24, 188, 36), "방 코드  <b>" + Net.RoomCode + "</b>  복사", S_iconBtn))
-                    { GUIUtility.systemCopyBuffer = Net.RoomCode; Session.Notice = "방 코드를 복사했어요"; }
+                    if (GUI.Button(new Rect(x, 24, 188, 36), InviteLabel(), S_iconBtn)) InviteClick();
                 }
             }
             GUI.DrawTexture(new Rect(28, 74, W - 56, 1), T_line);
@@ -536,8 +599,11 @@ namespace ADOFAIMulti
             if (!_newPublic)
             {
                 GUILayout.Space(6);
-                _roomPw = GUILayout.PasswordField(_roomPw ?? "", '*', 32, S_field);
-                if (string.IsNullOrEmpty(_roomPw) && Event.current.type == EventType.Repaint) { var lr = GUILayoutUtility.GetLastRect(); GUI.Label(new Rect(lr.x + 16, lr.y, lr.width, lr.height), "비밀번호", Label(15, A(C_sub, 0.6f))); }
+                var pr = GUILayoutUtility.GetRect(100, 40, GUILayout.ExpandWidth(true));
+                EyeButton(pr, ref _pwShowCreate);
+                var pr2 = new Rect(pr.x, pr.y, pr.width - 44, pr.height);
+                _roomPw = _pwShowCreate ? GUI.TextField(pr2, _roomPw ?? "", 32, S_field) : GUI.PasswordField(pr2, _roomPw ?? "", '*', 32, S_field);
+                if (string.IsNullOrEmpty(_roomPw) && Event.current.type == EventType.Repaint) GUI.Label(new Rect(pr2.x + 16, pr2.y, pr2.width, pr2.height), "비밀번호", Label(15, A(C_sub, 0.6f)));
             }
             GUILayout.EndVertical();
 
@@ -550,10 +616,10 @@ namespace ADOFAIMulti
             if (_joinId.Length == 0 && Event.current.type == EventType.Repaint)
             {
                 var lr = GUILayoutUtility.GetLastRect();
-                GUI.Label(new Rect(lr.x + 16, lr.y, lr.width, lr.height), "방 코드 6자리", Label(15, A(C_sub, 0.6f)));
+                GUI.Label(new Rect(lr.x + 16, lr.y, lr.width, lr.height), "참가 코드 6자리", Label(15, A(C_sub, 0.6f)));
             }
             GUI.enabled = Net.IsValidCode(_joinId);
-            if (GUILayout.Button("참가", S_cta40, GUILayout.Width(110))) Net.Join(_joinId);
+            if (GUILayout.Button("참가", S_cta40, GUILayout.Width(110))) Net.JoinByCode(_joinId);
             GUI.enabled = true;
             GUILayout.EndHorizontal();
             GUILayout.EndVertical();
@@ -606,10 +672,10 @@ namespace ADOFAIMulti
             {
                 var sr = new Rect(r.x, y, r.width, sh);
                 if (i < list.Count) DrawSlot(sr, list[i], i);
-                else if (GUI.Button(sr, Net.CanInvite ? "+  빈 자리 · Steam 초대" : "+  빈 자리 · 방 코드 " + Net.RoomCode, S_empty))
+                else if (GUI.Button(sr, Net.CanInvite ? "+  빈 자리 · Steam 초대" : !string.IsNullOrEmpty(Net.InviteCode) ? "+  빈 자리 · 코드 " + Net.InviteCode : Net.IsHost ? "+  빈 자리 · 참가 코드 만들기" : "+  빈 자리", S_empty))
                 {
                     if (Net.CanInvite) Net.InviteOverlay();
-                    else { GUIUtility.systemCopyBuffer = Net.RoomCode ?? ""; Session.Notice = "방 코드를 복사했어요"; }
+                    else if (Net.IsHost || !string.IsNullOrEmpty(Net.InviteCode)) InviteClick();
                 }
                 y += sh + 8;
             }
@@ -730,15 +796,16 @@ namespace ADOFAIMulti
             else if (ph == Phase.Lobby)
             {
                 GUILayout.Label("다음 할 일", S_section);
-                GUILayout.Label(Session.MapHash == null ? "맵을 골라서 배포하세요." : "같은 맵으로 한 판 더 하거나, 다른 맵을 골라요.", S_paraTxt);
+                GUILayout.Label(Session.MapHash == null ? "맵을 선택하면 모두에게 보내져요." : "같은 맵으로 한 판 더 하거나, 다른 맵을 선택하세요.", S_paraTxt);
                 GUILayout.FlexibleSpace();
                 GUILayout.BeginHorizontal();
                 if (Session.MapHash != null && !string.IsNullOrEmpty(Session.HostLevelPath))
                 {
                     if (GUILayout.Button("이 맵으로 한 판 더", S_cta)) Session.HostRedo();
-                    if (GUILayout.Button("다른 맵 고르기", S_ctaGhost, GUILayout.Width(220))) { _drawer = true; _drawerTab = 1; }
+                    if (!_layoutMapBtn && GUILayout.Button("다른 맵 선택", S_ctaGhost, GUILayout.Width(220))) { _drawer = true; _drawerTab = 1; }
                 }
-                else if (GUILayout.Button("맵 고르기", S_cta)) { _drawer = true; _drawerTab = 1; }
+                else if (!_layoutMapBtn && GUILayout.Button("맵 선택", S_cta)) { _drawer = true; _drawerTab = 1; }
+                JudgeRow();
                 GUILayout.EndHorizontal();
             }
             else if (ph == Phase.Packing || ph == Phase.Distributing)
@@ -750,7 +817,7 @@ namespace ADOFAIMulti
                 GUI.enabled = Session.CanStart;
                 if (GUILayout.Button($"시작  {Session.ReadyCount}/{Session.ReadyNeeded} 준비", S_cta)) Session.HostStart();
                 GUI.enabled = true;
-                if (GUILayout.Button("다른 맵 고르기", S_ctaGhost, GUILayout.Width(220))) { _drawer = true; _drawerTab = 1; }
+                if (!_layoutMapBtn && GUILayout.Button("다른 맵 선택", S_ctaGhost, GUILayout.Width(220))) { _drawer = true; _drawerTab = 1; }
                 GUILayout.EndHorizontal();
             }
             else
@@ -801,6 +868,7 @@ namespace ADOFAIMulti
                 GUILayout.Label("다른 사람이 끝나길 기다리는 중이에요.", S_paraTxt);
                 return;
             }
+            GUILayout.Label($"판정: {Session.JudgeNames[Session.Judge]}", S_sub);
             GUILayout.Label("대기 중", S_section);
             GUILayout.Label(Session.MapHash == null ? "방장이 맵을 고르면 자동으로 받아요." : "방장이 다음 판을 준비하는 중이에요.", S_paraTxt);
         }
@@ -903,7 +971,7 @@ namespace ADOFAIMulti
             Fill(new Rect(r.x, 0, 1, H), C_line);
             GUILayout.BeginArea(new Rect(r.x + 28, 28, r.width - 56, H - 56));
             GUILayout.BeginHorizontal();
-            GUILayout.Label("맵 고르기", Label(26, C_txt, FontStyle.Bold));
+            GUILayout.Label("맵 선택", Label(26, C_txt, FontStyle.Bold));
             GUILayout.FlexibleSpace();
             if (GUILayout.Button("닫기", S_iconBtn, GUILayout.Width(80))) _drawer = false;
             GUILayout.EndHorizontal();

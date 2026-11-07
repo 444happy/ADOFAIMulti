@@ -132,7 +132,39 @@ namespace ADOFAIMulti
         public static bool RoomPublic;
         public static string RoomName = "";
         public static string RoomPw = "";            // 방장: 비공개 방 비밀번호
-        static string _joinPw = "";
+        static string _joinPw = "", _joinInv = "";
+        public static string InviteCode;             // 방장이 방 안에서 만든 참가 코드 (없으면 코드로 못 들어옴)
+        public static bool InviteBusy;
+
+        /// <summary>방장: 참가 코드 만들기 (이미 있으면 같은 코드)</summary>
+        public static void RequestInvite()
+        {
+            if (!IsHost || _relay == null) return;
+            InviteBusy = true;
+            _relay.SendText("{\"t\":\"invite\"}");
+        }
+
+        /// <summary>참가 코드로 들어가기: 서버에서 방을 찾은 뒤 접속 (비밀번호 없이 입장)</summary>
+        public static void JoinByCode(string inv)
+        {
+            inv = NormalizeCode(inv);
+            if (!IsValidCode(inv) || Runner.Instance == null) return;
+            Runner.Instance.StartCoroutine(JoinByCodeCo(inv));
+        }
+        static System.Collections.IEnumerator JoinByCodeCo(string inv)
+        {
+            Status = "코드 확인 중...";
+            using (var req = UnityEngine.Networking.UnityWebRequest.Get(HttpBase + "/invite/" + inv))
+            {
+                req.timeout = 10;
+                yield return req.SendWebRequest();
+                if (req.result != UnityEngine.Networking.UnityWebRequest.Result.Success && req.responseCode != 200)
+                { Status = req.responseCode == 404 ? "서버 업데이트가 필요해요" : "서버에 연결하지 못했어요"; yield break; }
+                JObject j; try { j = JObject.Parse(req.downloadHandler.text); } catch { Status = "서버 응답을 읽지 못했어요"; yield break; }
+                if (!((bool?)j["ok"] ?? false)) { Status = (string)j["msg"] ?? "없는 코드예요"; yield break; }
+                Session.RequestJoin((string)j["room"], "", inv);
+            }
+        }
         public const string LobbyPwKey = "adofaimultipw";
         static string _lastMeta;
 
@@ -169,21 +201,26 @@ namespace ADOFAIMulti
             _relay.SendText(meta);
         }
 
-        public static void Join(string code, string password = "")
+        public static void Join(string code, string password = "", string invite = "")
         {
             _joinPw = (password ?? "").Trim();
+            _joinInv = invite ?? "";
             if (_relay != null) Leave();
             Connect(NormalizeCode(code), false);
         }
 
         static void Connect(string code, bool host)
         {
-            MyId = NewId(); HostId = 0; Members.Clear(); _welcomed = false; _hostMode = host; _lastMeta = null;
+            MyId = NewId(); HostId = 0; Members.Clear(); _welcomed = false; _hostMode = host; _lastMeta = null; InviteCode = null; InviteBusy = false;
             RoomCode = code;
             Status = host ? "방 만드는 중..." : $"방 {code} 에 들어가는 중...";
             string url = $"{RelayUrl}/room/{code}?id={MyId}&host={(host ? 1 : 0)}&v={Uri.EscapeDataString(Main.Version)}&name={Uri.EscapeDataString(MyName)}";
             if (host) url += $"&pub={(RoomPublic ? 1 : 0)}&rname={Uri.EscapeDataString(RoomName ?? "")}&pw={Uri.EscapeDataString(RoomPw ?? "")}";
-            else if (!string.IsNullOrEmpty(_joinPw)) url += "&pw=" + Uri.EscapeDataString(_joinPw);
+            else
+            {
+                if (!string.IsNullOrEmpty(_joinPw)) url += "&pw=" + Uri.EscapeDataString(_joinPw);
+                if (!string.IsNullOrEmpty(_joinInv)) url += "&inv=" + Uri.EscapeDataString(_joinInv);
+            }
             Main.Log($"Relay connect {(host ? "host" : "join")} {code}");
             _relay = new RelayClient();
             _relay.Connect(url);
@@ -309,6 +346,10 @@ namespace ADOFAIMulti
                     Session.OnMemberLeft(id);
                     break;
                 }
+                case "invite":
+                    InviteCode = (string)j["code"]; InviteBusy = false;
+                    if (!string.IsNullOrEmpty(InviteCode)) { UnityEngine.GUIUtility.systemCopyBuffer = InviteCode; Session.Notice = "참가 코드 " + InviteCode + " — 복사했어요. 이 코드로 비밀번호 없이 들어와요"; }
+                    break;
                 case "error":
                     Status = (string)j["msg"] ?? "접속 실패";
                     Main.Log("Relay error: " + (string)j["code"]);

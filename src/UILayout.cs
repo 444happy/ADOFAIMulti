@@ -76,7 +76,8 @@ namespace ADOFAIMulti
             string RN(int i) => i < res.Count ? Trim(res[i].Name, 12) : "-";
             string RA(int i) => i < res.Count ? $"{res[i].Stats.Acc * 100:0.00}%" : "";
             return Esc(t)
-                .Replace("{code}", Net.RoomCode ?? "")
+                .Replace("{code}", Net.InviteCode ?? "")
+                .Replace("{judge}", Session.JudgeNames[Session.Judge])
                 .Replace("{roomName}", Esc(Net.RoomName ?? ""))
                 .Replace("{myName}", Esc(Net.MyName))
                 .Replace("{song}", noMap ? (Net.IsHost ? "어떤 맵으로 할까요?" : "방장이 맵을 고르는 중...") : Esc(song))
@@ -123,9 +124,9 @@ namespace ADOFAIMulti
         }
 
         static readonly Dictionary<string, GUIStyle> _lField = new Dictionary<string, GUIStyle>();
-        static string LInput(Layout.El e, Rect r, string value, string placeholder, int max = 40, bool password = false)
+        static string LInput(Layout.El e, Rect r, string value, string placeholder, int max = 40, bool password = false, Rect? box = null)
         {
-            LBox(r, e.Fill, e.Stroke, e.Radius);
+            LBox(box ?? r, e.Fill, e.Stroke, e.Radius);
             string key = LS(e.Size) + "|" + e.Weight;
             if (!_lField.TryGetValue(key, out var st) || st.font != _font)
             {
@@ -226,21 +227,34 @@ namespace ADOFAIMulti
                 case "방 만들기": LButton(e, r, !inRoom, TryCreateRoom); return;
                 case "비밀번호 입력":
                     if (inRoom || _newPublic) return;                // 비공개를 골랐을 때만 보임
-                    _roomPw = LInput(e, r, _roomPw, Tok(e.Text), 32, true); return;
+                {
+                    float ew = Mathf.Min(r.height, 40) + 4;
+                    _roomPw = LInput(e, new Rect(r.x, r.y, r.width - ew, r.height), _roomPw, Tok(e.Text), 32, !_pwShowCreate, r);
+                    var o = GUI.enabled; GUI.enabled = !_lBlocked && o;
+                    EyeButton(r, ref _pwShowCreate);
+                    GUI.enabled = o;
+                    return;
+                }
                 case "방 코드로 참가":
                     if (e.Type == "input") _joinId = Net.NormalizeCode(LInput(e, r, _joinId, Tok(e.Text), 8));
-                    else LButton(e, r, Net.IsValidCode(_joinId), () => Net.Join(_joinId));
+                    else LButton(e, r, Net.IsValidCode(_joinId), () => Net.JoinByCode(_joinId));
                     return;
 
                 // ---- 로비 ----
                 case "방 코드 복사":
-                    if (string.IsNullOrEmpty(Net.RoomCode)) return;
-                    LButton(e, r, true, () => { GUIUtility.systemCopyBuffer = Net.RoomCode; Session.Notice = "방 코드를 복사했어요"; },
-                        e.Text.Contains("{code}") ? Tok(e.Text) : "코드 " + Net.RoomCode);
+                    if (!host && string.IsNullOrEmpty(Net.InviteCode)) return;
+                    LButton(e, r, !Net.InviteBusy, InviteClick,
+                        string.IsNullOrEmpty(Net.InviteCode) ? (Net.InviteBusy ? "만드는 중..." : "코드 만들기") : e.Text.Contains("{code}") ? Tok(e.Text) : "코드 " + Net.InviteCode);
                     return;
+                case "판정 설정":
+                {
+                    string t = e.Text ?? ""; int j = t.Contains("느슨") ? 0 : t.Contains("엄격") ? 2 : 1;
+                    LToggle(e, r, Session.Judge == j, () => Session.HostSetJudge(j), host);
+                    return;
+                }
                 case "Steam 초대": if (Net.CanInvite) LButton(e, r, true, Net.InviteOverlay); return;
                 case "플레이어 명단": LBox(r, e.Fill, e.Stroke, e.Radius); DrawLineup(r, false); return;
-                case "맵 고르기 열기": if (host) LButton(e, r, !busy, () => { _drawer = true; _drawerTab = 1; }); return;
+                case "맵 고르기 열기": case "맵 선택 열기": if (host) LButton(e, r, !busy, () => { _drawer = true; _drawerTab = 1; }); return;
                 case "한 판 더": if (host && Session.MapHash != null && !string.IsNullOrEmpty(Session.HostLevelPath)) LButton(e, r, true, () => { ShowResults = false; Session.HostRedo(); }); return;
                 case "준비 (F5)":
                     if (host) LButton(e, r, Session.CanStart, Session.HostStart, Session.Phase == Phase.Distributing ? $"시작  {Session.ReadyCount}/{Session.ReadyNeeded} 준비" : "시작");
@@ -390,6 +404,7 @@ namespace ADOFAIMulti
             if (!inRoom) main = Layout.Get("s_entrance");
             else main = Layout.Get("s_lobby");
             if (main == null) return false;
+            _layoutMapBtn = inRoom && main.Els.Any(x => x.Func == "맵 고르기 열기" || x.Func == "맵 선택 열기");
 
             bool results = inRoom && ShowResults && Session.Results.Count > 0 && Layout.Get("s_results") != null;
             bool drawer = _drawer && Layout.Get("s_maps") != null;
