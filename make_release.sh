@@ -58,20 +58,27 @@ cat > "$BUILD/Info.json" <<EOF
 }
 EOF
 
-# 3) 설치기 exe
-dotnet "$CSC" -nologo -noconfig -nostdlib -target:exe -platform:anycpu -langversion:9 -optimize -nowarn:1701,1702,0436 \
-  -out:"$BUILD/ADOFAIMulti_Installer.exe" -r:"$M/mscorlib.dll" -r:"$M/System.dll" -r:"$M/System.Core.dll" \
-  -resource:"$BUILD/ADOFAIMulti.dll",ADOFAIMulti.dll -resource:"$BUILD/Info.json",Info.json "$ROOT/installer/Installer.cs"
+# 3) 설치기 exe (창으로 된 설치기, .NET Framework 4 WinForms) — 모드 + UMM(Doorstop) 파일을 안에 넣음
+FW="${FW_DIR:-C:/Windows/Microsoft.NET/Framework64/v4.0.30319}"
+U="$ROOT/installer/umm"
+dotnet "$CSC" -nologo -noconfig -nostdlib -target:winexe -platform:anycpu -langversion:9 -optimize -nowarn:1701,1702,0436 \
+  -out:"$BUILD/ADOFAIMulti_Installer.exe" \
+  -r:"$FW/mscorlib.dll" -r:"$FW/System.dll" -r:"$FW/System.Core.dll" -r:"$FW/System.Drawing.dll" -r:"$FW/System.Windows.Forms.dll" \
+  -resource:"$BUILD/ADOFAIMulti.dll",ADOFAIMulti.dll -resource:"$BUILD/Info.json",Info.json -resource:"$ROOT/design/layout.json",layout.json \
+  -resource:"$U/UnityModManager.dll",umm/UnityModManager.dll -resource:"$U/0Harmony.dll",umm/0Harmony.dll -resource:"$U/dnlib.dll",umm/dnlib.dll \
+  -resource:"$U/UnityModManager.xml",umm/UnityModManager.xml -resource:"$U/Config.xml",umm/Config.xml \
+  -resource:"$U/winhttp.dll",umm/winhttp.dll -resource:"$U/doorstop_config.ini",umm/doorstop_config.ini \
+  "$ROOT/installer/Installer.cs"
 
 # 4) 릴리스 파일
-cp "$BUILD/ADOFAIMulti.dll" "$BUILD/Info.json" "$OUT/"
+cp "$BUILD/ADOFAIMulti.dll" "$BUILD/Info.json" "$BUILD/ADOFAIMulti_Installer.exe" "$OUT/"
 cp "$ROOT/design/layout.json" "$OUT/layout.json"
 echo "wss://adofai-multi-relay.444happy123.workers.dev" > "$OUT/relay.txt"
 TMP=$(mktemp -d); mkdir -p "$TMP/umm/ADOFAIMulti" "$TMP/inst"
 cp "$BUILD/ADOFAIMulti.dll" "$BUILD/Info.json" "$ROOT/design/layout.json" "$TMP/umm/ADOFAIMulti/"
 (cd "$TMP/umm" && mkzip "$OUT/ADOFAIMulti_UMM.zip" ADOFAIMulti)
 cp "$BUILD/ADOFAIMulti_Installer.exe" "$TMP/inst/"
-printf '1. UnityModManager(UMM)를 먼저 설치하세요: https://www.nexusmods.com/site/mods/21\r\n2. 얼불춤을 끄고 ADOFAIMulti_Installer.exe 실행 -> 1 입력\r\n3. "Windows의 PC 보호" 창이 뜨면 "추가 정보 -> 실행"\r\n4. 메인 섬에 생기는 "멀티" 포탈로 이동\r\n5. 이후 업데이트는 게임 실행 시 자동으로 받아집니다 (재시작하면 적용)\r\n' > "$TMP/inst/읽어주세요.txt"
+printf '1. 얼불춤을 끄고 ADOFAIMulti_Installer.exe 실행 -> 설치\r\n   (UnityModManager가 없으면 같이 설치됩니다)\r\n2. "Windows의 PC 보호" 창이 뜨면 "추가 정보 -> 실행"\r\n3. 게임에서 메인 섬의 "멀티" 포탈로 이동\r\n4. 이후 업데이트는 게임 실행 시 자동 (재시작하면 적용)\r\n' > "$TMP/inst/읽어주세요.txt"
 (cd "$TMP/inst" && mkzip "$OUT/ADOFAIMulti_Installer.zip" *)
 rm -rf "$TMP"
 

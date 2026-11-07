@@ -2,7 +2,7 @@
 
 A Dance of Fire and Ice를 친구끼리 같이 플레이하는 멀티 모드 (UnityModManager)
 
-**[⬇ 다운로드 (최신 버전)](https://github.com/444happy/ADOFAIMulti/raw/main/release/ADOFAIMulti_Installer.zip)** · [릴리스 목록](https://github.com/444happy/ADOFAIMulti/releases)
+**[⬇ 설치기 다운로드 (ADOFAIMulti_Installer.exe)](https://github.com/444happy/ADOFAIMulti/raw/main/release/ADOFAIMulti_Installer.exe)** · [릴리스 목록](https://github.com/444happy/ADOFAIMulti/releases)
 
 ## 기능
 - 방 만들기 / 참가 코드로 입장 (공개·비공개 방, 최대 8명)
@@ -15,27 +15,25 @@ A Dance of Fire and Ice를 친구끼리 같이 플레이하는 멀티 모드 (Un
 
 ## 설치
 
-먼저 [UnityModManager(UMM)](https://www.nexusmods.com/site/mods/21)를 설치하고, 얼불춤을 꺼주세요.
+### 방법 1. 설치기 (추천)
 
-### 방법 1. PowerShell 한 줄 (추천)
+1. 얼불춤을 끄고 [ADOFAIMulti_Installer.exe](https://github.com/444happy/ADOFAIMulti/raw/main/release/ADOFAIMulti_Installer.exe) 실행
+2. 게임 폴더는 자동으로 찾아요 (못 찾으면 "찾아보기")
+3. **설치** 클릭 → 끝나면 **게임 실행**
 
-시작 → "PowerShell" 검색 → 열고 아래 한 줄을 붙여넣기:
+UnityModManager(UMM)가 없으면 설치기가 같이 설치해요. 따로 받을 필요 없어요.
+
+> ⚠️ **Windows 경고 안내**
+> 설치기는 코드 서명이 안 된 exe라서 **"Windows의 PC 보호"** 창이 뜰 수 있어요.
+> **추가 정보 → 실행**을 누르면 돼요. 브라우저가 다운로드를 막으면 "유지"를 눌러주세요.
+
+### 방법 2. PowerShell 한 줄
+
+[UnityModManager](https://www.nexusmods.com/site/mods/21)가 이미 깔려 있다면, PowerShell에 붙여넣기:
 
 ```powershell
 irm https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/install.ps1 | iex
 ```
-
-파일을 내려받지 않아서 브라우저·Windows 경고가 뜨지 않아요.
-
-### 방법 2. 설치기
-
-1. [ADOFAIMulti_Installer.zip](https://github.com/444happy/ADOFAIMulti/raw/main/release/ADOFAIMulti_Installer.zip) 다운로드 → 압축 풀기
-2. `ADOFAIMulti_Installer.exe` 실행 → `1` 입력
-
-> ⚠️ **Windows 경고 안내**
-> 설치기는 코드 서명이 안 된 exe라서 **"Windows의 PC 보호"** 창이 뜰 수 있어요.
-> **추가 정보 → 실행**을 누르면 설치돼요. 브라우저가 다운로드를 막으면 "유지"를 눌러주세요.
-> 경고가 싫으면 방법 1이나 방법 3을 쓰세요.
 
 ### 방법 3. UMM에 직접
 

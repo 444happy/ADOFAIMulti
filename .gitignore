@@ -5,6 +5,8 @@ dist/
 *.zip
 !release/*.dll
 !release/*.zip
+!release/*.exe
+!installer/umm/*.dll
 node_modules/
 .wrangler/
 bin/
