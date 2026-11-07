@@ -72,6 +72,40 @@ namespace ADOFAIMulti
             Net.Broadcast(Packet.Build(Msg.Settings, w => w.Write(Judge)));
             Notice = "판정: " + JudgeNames[Judge];
         }
+        // ===================== 채팅 =====================
+        public class ChatMsg { public ulong Id; public string Name, Text; }
+        public static readonly List<ChatMsg> Chat = new List<ChatMsg>();
+        public static int ChatVersion;                             // 새 줄이 오면 올라감 (UI 자동 스크롤)
+        public const int ChatMax = 120;
+        static readonly Dictionary<ulong, float> _chatNext = new Dictionary<ulong, float>();
+
+        static string CleanChat(string t)
+        {
+            t = (t ?? "").Replace('\n', ' ').Replace('\r', ' ').Trim();
+            if (t.Length == 0) return null;
+            return t.Length > ChatMax ? t.Substring(0, ChatMax) : t;
+        }
+
+        public static void SendChat(string text)
+        {
+            text = CleanChat(text);
+            if (text == null || !InRoom) return;
+            Net.SendToHost(Packet.Build(Msg.Chat, w => w.Write(text)));
+        }
+
+        /// <summary>방장: 모두에게 한 줄 보냄 (id 0 = 알림)</summary>
+        static void HostChat(ulong id, string name, string text)
+        {
+            if (Net.IsHost) Net.Broadcast(Packet.Build(Msg.ChatLine, w => { w.Write(id); w.Write(name ?? ""); w.Write(text); }));
+        }
+
+        static void AddChat(ulong id, string name, string text)
+        {
+            Chat.Add(new ChatMsg { Id = id, Name = name, Text = text });
+            if (Chat.Count > 100) Chat.RemoveRange(0, Chat.Count - 100);
+            ChatVersion++;
+        }
+
         static bool _resultsSent;
         static float _goAt, _nextProgress, _nextBoard, _notInGameSince = -1;
         public static float CountdownLeft => Mathf.Max(0, _goAt - Time.realtimeSinceStartup);
@@ -81,6 +115,7 @@ namespace ADOFAIMulti
         {
             ResetMatch();
             Peers.Clear();
+            Chat.Clear(); _chatNext.Clear(); ChatVersion++;
             Phase = Phase.Lobby;
             if (host) Peers[Net.MyId] = new Entry { Id = Net.MyId, Name = Net.MyName, State = PState.Lobby };
             else Net.SendToHost(Packet.Build(Msg.Hello, w => { w.Write(Net.MyName); w.Write(Main.Version); }));
@@ -95,6 +130,7 @@ namespace ADOFAIMulti
             Peers.Clear();
             Board.Clear();
             Results.Clear();
+            Chat.Clear(); _chatNext.Clear();
             MapHash = null;
         }
 
@@ -103,7 +139,8 @@ namespace ADOFAIMulti
         public static void OnMemberLeft(ulong id)
         {
             if (id == Net.HostId && !Net.IsHost) { Notice = "방장이 나갔습니다"; LeaveRoom(); return; }
-            Peers.Remove(id);
+            if (Peers.TryGetValue(id, out var left)) { Peers.Remove(id); HostChat(0, "", left.Name + "님이 나갔어요"); }
+            _chatNext.Remove(id);
         }
 
         static void ResetMatch()
@@ -484,6 +521,19 @@ namespace ADOFAIMulti
                     Net.Send(from, Packet.Build(Msg.Welcome));
                     Net.Send(from, Packet.Build(Msg.Settings, w => w.Write(Judge)));
                     if (MapHash != null) Net.Send(from, OfferPacket());
+                    HostChat(0, "", name + "님이 들어왔어요");
+                    break;
+                }
+                case Msg.Chat:
+                {
+                    if (e == null) return;
+                    var text = CleanChat(r.ReadString());
+                    if (text == null) return;
+                    // 도배 방지: 한 사람당 0.4초에 한 줄
+                    float now = Time.realtimeSinceStartup;
+                    if (_chatNext.TryGetValue(from, out var next) && now < next) return;
+                    _chatNext[from] = now + 0.4f;
+                    HostChat(from, e.Name, text);
                     break;
                 }
                 case Msg.MapNeed:
@@ -528,8 +578,9 @@ namespace ADOFAIMulti
         {
             switch (type)
             {
-                case Msg.Welcome: Notice = "방에 들어왔습니다"; break;
+                case Msg.Welcome: break;
                 case Msg.Settings: if (!Net.IsHost) Judge = r.ReadByte(); break;
+                case Msg.ChatLine: { var id = r.ReadUInt64(); var nm = r.ReadString(); AddChat(id, nm, r.ReadString()); break; }
                 case Msg.Reject: Notice = r.ReadString(); LeaveRoom(); break;
                 case Msg.MapOffer:
                     MapHash = r.ReadString(); MapSize = r.ReadInt64(); MapRel = r.ReadString(); MapTitle = r.ReadString(); MapSong = r.ReadString(); MapArtist = r.ReadString(); MapAuthor = r.ReadString();

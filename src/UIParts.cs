@@ -218,6 +218,22 @@ namespace ADOFAIMulti
             return hit;
         }
 
+        /// <summary>모두 같은 크기인 버튼들 (오른쪽 정렬). 누른 번호, 없으면 -1</summary>
+        static int ModalButtonsSame(Rect content, params (string text, GUIStyle style)[] btns)
+        {
+            float bh = 46, w = 120;
+            foreach (var b in btns) w = Mathf.Max(w, b.style.CalcSize(new GUIContent(b.text)).x + 24);
+            float x = content.xMax, y = content.yMax - bh;
+            int hit = -1;
+            for (int i = btns.Length - 1; i >= 0; i--)
+            {
+                x -= w;
+                if (GUI.Button(new Rect(x, y, w, bh), btns[i].text, btns[i].style)) hit = i;
+                x -= 10;
+            }
+            return hit;
+        }
+
         // ---------------- 판정 분포 막대 ----------------
         static void JudgeBar(Rect r, Stats s)
         {

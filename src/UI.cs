@@ -20,7 +20,7 @@ namespace ADOFAIMulti
         static Texture2D Own(Texture2D t) { t.hideFlags = HideFlags.HideAndDontSave; _owned.Add(t); return t; }
 
         static Texture2D T_bg, T_side, T_card, T_cardHi, T_acc, T_line, T_fire, T_ice, T_white, T_circle, T_dim, T_chip, T_glow, T_grad, T_accBar, T_sideHi;
-        static GUIStyle S_para, S_paraTxt, S_h1, S_h2, S_txt, S_sub, S_small, S_num, S_card, S_cardBtn, S_btn, S_btnAcc, S_side, S_sideOn, S_field, S_chip, S_big, S_row, S_rowOn, S_logo, S_section;
+        static GUIStyle S_para, S_paraTxt, S_h1, S_h2, S_txt, S_sub, S_small, S_num, S_card, S_cardBtn, S_btn, S_btnAcc, S_btnDanger, S_side, S_sideOn, S_field, S_chip, S_big, S_row, S_rowOn, S_logo, S_section;
         static Font _font;
 
         static Color Hex(string h) { ColorUtility.TryParseHtmlString("#" + h, out var c); return c; }
@@ -154,6 +154,7 @@ namespace ADOFAIMulti
             S_cardBtn = Button(T_card, T_cardHi, C_txt, 16, 0); S_cardBtn.alignment = TextAnchor.UpperLeft; S_cardBtn.padding = new RectOffset(18, 18, 16, 16); S_cardBtn.margin = new RectOffset(6, 6, 6, 6);
             S_btn = Button(Round(C_cardHi, 10, border), Round(Color.Lerp(C_cardHi, C_acc, 0.18f), 10, A(C_acc, 0.4f)), C_txt, 15, 40);
             S_btnAcc = Button(T_acc, Round(Color.Lerp(C_acc, Color.white, 0.18f), 12, null, Color.Lerp(C_acc2, Color.white, 0.18f)), th.AccText, 16, 46); S_btnAcc.fontStyle = FontStyle.Bold;
+            S_btnDanger = Button(Round(Hex("ff8f8f"), 12), Round(Hex("ffa8a8"), 12), Hex("3a1010"), 15, 46); S_btnDanger.fontStyle = FontStyle.Bold;
             S_side = Button(null, Round(A(C_acc, 0.07f), 10), C_sub, 12, 46, C_txt); S_side.padding = new RectOffset(0, 0, 0, 0); S_side.fixedWidth = 46;
             S_sideOn = Button(T_sideHi, T_sideHi, C_acc, 12, 46); S_sideOn.fontStyle = FontStyle.Bold; S_sideOn.padding = new RectOffset(0, 0, 0, 0); S_sideOn.fixedWidth = 46;
             S_field = new GUIStyle(GUI.skin.textField) { font = _font, fontSize = 15, fixedHeight = 40, padding = new RectOffset(14, 14, 10, 10), border = new RectOffset(10, 10, 10, 10), margin = new RectOffset(4, 4, 4, 4) };
@@ -1576,7 +1577,7 @@ namespace ADOFAIMulti
             GUI.Label(new Rect(cr.x, cr.y, cr.width, 60), Net.IsHost
                 ? "방장이 나가면 방이 사라지고 모두 로비 밖으로 나가요."
                 : "나간 뒤 다시 들어오려면 공개 방 목록이나 참가 코드로 들어와야 해요.", Label(15, C_sub, FontStyle.Normal, TextAnchor.UpperLeft, true));
-            int hit = ModalButtons(cr, ("취소", false, true), ("방만 나가기", false, true), ("메인 메뉴로", true, true));
+            int hit = ModalButtonsSame(cr, ("취소", S_btn), ("방 나가기", S_btn), ("메인 메뉴로", S_btnDanger));
             if (hit == 0) _confirmLeave = false;
             if (hit == 1) { _confirmLeave = false; Session.LeaveRoom(); ShowResults = false; }
             if (hit == 2) { _confirmLeave = false; Session.LeaveRoom(); Island.Leave(); }

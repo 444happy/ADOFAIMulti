@@ -328,7 +328,7 @@ namespace ADOFAIMulti
                         if ((bool)mm["host"]) HostId = id;
                     }
                     _welcomed = true;
-                    Status = _hostMode ? "방을 만들었어요" : "방에 들어왔어요";
+                    Status = "";
                     Session.OnRoomEntered(_hostMode);
                     if (_hostMode) CreateInviteLobby();
                     break;

@@ -1,7 +1,7 @@
 {
-  "Version": "0.20.0",
+  "Version": "0.21.0",
   "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
   "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
-  "Sha256": "55c1cbf2f74a30ef7560dddbce6742c19accea3f55704dcbc9e0f6387a8cfac7",
-  "Notes": "방 화면 정리: 판정 아이콘 하나로 · 맵 선택/메인 버튼 카드 안으로 · 진행 바 삭제"
+  "Sha256": "e3a7a08990a5a25643bc8fa42d11888bd25a0d308bded9d16176fbaab317aa88",
+  "Notes": "채팅 추가, 방 화면 정리 (메인 버튼을 방 설정 카드로, 안내 문구 삭제), 나가기 팝업 정리"
 }

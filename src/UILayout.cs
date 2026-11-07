@@ -295,7 +295,6 @@ namespace ADOFAIMulti
                             Icons.Draw(new Rect(ir.center.x - LS(28), ir.y, LS(56), LS(56)), "users", A(C_sub, 0.5f));
                             GUILayout.Space(LS(14));
                             GUILayout.Label("지금 열린 공개 방이 없어요", Label(LS(22), C_txt, FontStyle.Bold, TextAnchor.MiddleCenter));
-                            GUILayout.Label("오른쪽에서 방을 만들고 친구를 불러보세요", Label(LS(15), C_sub, FontStyle.Normal, TextAnchor.MiddleCenter));
                         }
                         else if (!RoomList.Loaded)
                         {
@@ -348,11 +347,11 @@ namespace ADOFAIMulti
                 case "판정 바꾸기":
                 {
                     // 지금 판정 아이콘 하나. 누를 때마다 보통 → 엄격 → 느슨 → 보통
+                    // 테두리 없이 아이콘만 칸을 꽉 채움 (마우스를 올리면 살짝 커짐)
                     int j = Session.Judge;
                     var oc = GUI.color;
                     bool hov = host && !_lBlocked && r.Contains(Event.current.mousePosition);
-                    LBox(r, hov ? Hex("262d38") : Hex("1f242c"), hov ? C_acc : Hex("323a46"), e.Radius);
-                    float s = Mathf.Min(r.width, r.height) * 0.7f;
+                    float s = Mathf.Min(r.width, r.height) * (hov ? 1.06f : 1f);
                     JudgeIcon(new Rect(r.center.x - s / 2f, r.center.y - s / 2f, s, s), j);
                     GUI.color = oc;
                     if (hov)
@@ -364,7 +363,10 @@ namespace ADOFAIMulti
                         LBox(tr, Hex("0d0f12"), Hex("3a4452"), 8);
                         GUI.Label(tr, tip, ts);
                     }
-                    if (LClick(r, host, e.Radius)) Session.HostSetJudge(j == 1 ? 2 : j == 2 ? 0 : 1);
+                    // LClick 은 마우스를 올리면 네모 칸을 그려서, 여기서는 칸 없이 누르기만 받음
+                    var og = GUI.enabled; GUI.enabled = host && !_lBlocked && og;
+                    if (GUI.Button(r, GUIContent.none, GUIStyle.none)) Session.HostSetJudge(j == 1 ? 2 : j == 2 ? 0 : 1);
+                    GUI.enabled = og;
                     return;
                 }
                 case "판정 설정":
@@ -394,8 +396,8 @@ namespace ADOFAIMulti
                 case "Steam 초대": if (Net.CanInvite) LButton(e, r, true, Net.InviteOverlay); return;
                 case "플레이어 명단": LBox(r, e.Fill, e.Stroke, e.Radius); { var o = GUI.enabled; GUI.enabled = !_lBlocked && o; DrawLineup(r, false); GUI.enabled = o; } return;
                 case "맵 고르기 열기": case "맵 선택 열기":
-                    // 메인 버튼이 이미 "맵 선택"이면 겹치지 않게 숨김
-                    if (host)
+                    // 맵이 없을 때는 메인 버튼이 "맵 선택"이라 숨김 (맵이 정해진 뒤 다른 맵으로 바꿀 때만)
+                    if (host && !(_layoutMainBtn && Session.MapHash == null))
                         LButton(e, r, !busy, () => { _drawer = true; _drawerTab = 1; }, Session.MapHash != null && !string.IsNullOrEmpty(e.Text) && e.Text.Contains("맵 선택") ? e.Text.Replace("맵 선택", "다른 맵 선택") : null);
                     return;
                 case "한 판 더":
@@ -419,6 +421,7 @@ namespace ADOFAIMulti
                         else if (Session.DlActive) LButton(e, r, true, Session.DlCancel, "{i:close} 취소하고 관전");
                     }
                     return;
+                case "채팅": DrawChat(e, r); return;
                 case "진행 단계 표시": LBox(r, e.Fill, e.Stroke, e.Radius); DrawStepperL(r); return;
                 case "맵 받기 진행률":
                 {
@@ -562,6 +565,58 @@ namespace ADOFAIMulti
             if (e.Type == "progress") { LBox(r, e.Fill, e.Stroke, e.Radius); LBox(new Rect(r.x, r.y, r.width * 0.6f, r.height), e.Color, Color.clear, e.Radius); return; }
             LBox(r, e.Fill, e.Stroke, e.Radius);
             LText(e, r, Tok(e.Text));
+        }
+
+        // ---------------- 채팅 ----------------
+        static string _chatInput = "";
+        static Vector2 _sChat;
+        static int _chatSeen = -1;
+
+        static void DrawChat(Layout.El e, Rect r)
+        {
+            LBox(r, e.Fill, e.Stroke, e.Radius);
+            float head = string.IsNullOrEmpty(e.Text) ? LS(12) : LS(e.Size) * 1.6f + LS(12);
+            if (!string.IsNullOrEmpty(e.Text)) LText(e, r, Tok(e.Text));
+            float pad = LS(16), ih = LS(48), bw = LS(88);
+            var inR = new Rect(r.x + pad, r.yMax - pad - ih, r.width - pad * 3 - bw, ih);
+            var btR = new Rect(inR.xMax + pad, inR.y, bw, ih);
+            var list = new Rect(r.x + pad, r.y + head, r.width - pad * 2, inR.y - r.y - head - LS(10));
+
+            // 메시지 목록 (새 줄이 오면 맨 아래로)
+            if (_chatSeen != Session.ChatVersion) { _chatSeen = Session.ChatVersion; _sChat.y = float.MaxValue; }
+            var nameSt = Label(LS(15), C_acc, FontStyle.Bold, TextAnchor.UpperLeft);
+            var textSt = Label(LS(15), C_txt, FontStyle.Normal, TextAnchor.UpperLeft, true);
+            var sysSt = Label(LS(13), C_sub, FontStyle.Normal, TextAnchor.UpperLeft, true);
+            LArea(list, 0, () =>
+            {
+                _sChat = GUILayout.BeginScrollView(_sChat);
+                foreach (var m in Session.Chat)
+                {
+                    if (m.Id == 0) { GUILayout.Label(Esc(m.Text), sysSt); GUILayout.Space(LS(4)); continue; }
+                    bool me = m.Id == Net.MyId;
+                    GUILayout.BeginHorizontal();
+                    var nm = Trim(m.Name, 12);
+                    var ns = me ? Label(LS(15), C_gold, FontStyle.Bold, TextAnchor.UpperLeft) : nameSt;
+                    GUILayout.Label(nm, ns, GUILayout.Width(ns.CalcSize(new GUIContent(nm)).x + LS(10)));
+                    GUILayout.Label(Esc(m.Text), textSt);
+                    GUILayout.EndHorizontal();
+                    GUILayout.Space(LS(4));
+                }
+                GUILayout.EndScrollView();
+            });
+
+            // 입력 (Enter 로 보내기)
+            bool focus = GUI.GetNameOfFocusedControl() == "lin" + e.Id;
+            var ev = Event.current;
+            if (focus && ev.type == EventType.KeyDown && (ev.keyCode == KeyCode.Return || ev.keyCode == KeyCode.KeypadEnter))
+            {
+                Session.SendChat(_chatInput); _chatInput = "";
+                ev.Use();
+            }
+            var fe = new Layout.El { Id = e.Id, Size = 15, Weight = 500, Color = C_sub, Fill = Hex("141820"), Stroke = Hex("2c333d"), Radius = 10 };
+            _chatInput = LInput(fe, inR, _chatInput, "", Session.ChatMax);
+            var be = new Layout.El { Id = e.Id + "s", Size = 15, Weight = 700, Color = Theme.Current.AccText, Fill = C_acc, Stroke = C_acc, Radius = 10, Text = "보내기", Type = "button", Align = "center" };
+            LButton(be, btR, !string.IsNullOrEmpty(_chatInput.Trim()), () => { Session.SendChat(_chatInput); _chatInput = ""; });
         }
 
         // ---------------- 로고 (도는 두 행성 + ADOFAI MULTI) ----------------
