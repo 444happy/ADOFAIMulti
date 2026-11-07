@@ -7,7 +7,7 @@ namespace ADOFAIMulti
 {
     public static class Main
     {
-        public const string Version = "0.13.0";
+        public const string Version = "0.14.0";
         public static UnityModManager.ModEntry Mod;
         public static Harmony Harmony;
         public static bool Enabled;
@@ -42,8 +42,10 @@ namespace ADOFAIMulti
                 Island.Init(runner);
                 Theme.Load();
             Profile.Load();
+            Layout.LoadLocal();
                 Updater.CleanupOld();
                 runner.StartCoroutine(Net.LoadRelayUrl());
+                runner.StartCoroutine(Layout.FetchLoop());
                 runner.StartCoroutine(Updater.CheckAndUpdate());
             }
             else

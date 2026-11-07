@@ -9,7 +9,7 @@ namespace ADOFAIMulti
     /// 한 화면에서 보여주는 "로비 스테이지" 구성. 왼쪽 라인업(8슬롯), 오른쪽 스테이지,
     /// 방장의 맵 서랍, 결과 시상대, 설정 팝오버.
     /// </summary>
-    public static class UI
+    public static partial class UI
     {
         public static bool ShowResults;
 
@@ -182,7 +182,7 @@ namespace ADOFAIMulti
             Styles();
             if (S_cta == null || _extraVer != _builtVer) ExtraStyles();
             if (Island.InIsland) DrawIsland();
-            else if (Game.IsScnGame) { if (Session.InRoom) DrawInGame(); }
+            else if (Game.IsScnGame) { if (Session.InRoom && !DrawInGameLayout()) DrawInGame(); }
             else if (!Island.Busy) DrawPortal();
 
             if (Island.Cover > 0.001f) DrawCover();
@@ -296,6 +296,13 @@ namespace ADOFAIMulti
             }
 
             float W = Screen.width, H = Screen.height;
+            if (!(!Session.InRoom && Updater.UpdateRequired) && DrawIslandLayout())
+            {
+                if (_settings) DrawSettings(W, H);
+                if (_profile) DrawProfile(W, H);
+                if (_confirmLeave) DrawConfirm();
+                return;
+            }
             DrawBackdrop(W, H);
             DrawTopBar(W);
 
@@ -534,12 +541,15 @@ namespace ADOFAIMulti
         }
 
         // ---------------- 왼쪽: 라인업 (8슬롯) ----------------
-        static void DrawLineup(Rect r)
+        static void DrawLineup(Rect r, bool header = true)
         {
-            GUI.Label(new Rect(r.x + 4, r.y, r.width, 22), "라인업", S_section);
-            GUI.Label(new Rect(r.x, r.y, r.width - 4, 22), $"{Session.Board.Count} / 8", Label(13, C_sub, FontStyle.Bold, TextAnchor.MiddleRight));
-
-            float sh = Mathf.Min(70, (r.height - 34) / 8f - 8), y = r.y + 30;
+            if (header)
+            {
+                GUI.Label(new Rect(r.x + 4, r.y, r.width, 22), "라인업", S_section);
+                GUI.Label(new Rect(r.x, r.y, r.width - 4, 22), $"{Session.Board.Count} / 8", Label(13, C_sub, FontStyle.Bold, TextAnchor.MiddleRight));
+            }
+            float top = header ? 30 : 0;
+            float sh = Mathf.Min(70, (r.height - top - 4) / 8f - 8), y = r.y + top;
             var list = Session.Board;
             for (int i = 0; i < 8; i++)
             {
@@ -876,9 +886,10 @@ namespace ADOFAIMulti
         }
 
         /// <summary>P1 ~ U20 난이도 범위 막대 (손잡이 두 개를 끌어서 조절)</summary>
-        static void TufDiffRange()
+        static void TufDiffRange() => TufDiffRange(GUILayoutUtility.GetRect(100, 58, GUILayout.ExpandWidth(true)));
+
+        static void TufDiffRange(Rect area)
         {
-            var area = GUILayoutUtility.GetRect(100, 58, GUILayout.ExpandWidth(true));
             int n = Mathf.Max(1, Tuf.Pgu.Count);
             float x0 = area.x + 18, x1 = area.xMax - 18, ty = area.y + 34;
             float Pos(int i) => n <= 1 ? x0 : Mathf.Lerp(x0, x1, i / (float)(n - 1));
@@ -927,6 +938,17 @@ namespace ADOFAIMulti
             }
         }
 
+        /// <summary>입력이 멈추고 0.4초 뒤 / 필터를 바꾸면 바로 검색 (첫 진입 시 기본 정렬)</summary>
+        static void TufSearchTick()
+        {
+            if (_tufSent == null || _tufDirty || (_tufQuery != _tufSent && Time.unscaledTime - _tufTypedAt > 0.4f))
+            {
+                _tufDirty = false;
+                _tufSent = _tufQuery; _tufSel = null; _sTuf = Vector2.zero;
+                if (Runner.Instance != null) Tuf.Search(Runner.Instance, _tufQuery);
+            }
+        }
+
         static void DrawTufTab(bool busy)
         {
             var before = _tufQuery;
@@ -971,19 +993,28 @@ namespace ADOFAIMulti
                 }
             }
 
-            // 입력이 멈추고 0.4초 뒤 / 필터를 바꾸면 바로 검색 (첫 진입 시 기본 정렬)
-            if (_tufSent == null || _tufDirty || (_tufQuery != _tufSent && Time.unscaledTime - _tufTypedAt > 0.4f))
-            {
-                _tufDirty = false;
-                _tufSent = _tufQuery; _tufSel = null; _sTuf = Vector2.zero;
-                if (Runner.Instance != null) Tuf.Search(Runner.Instance, _tufQuery);
-            }
+            TufSearchTick();
             GUILayout.Space(2);
             GUILayout.Label(Tuf.Loading && Tuf.Results.Count == 0 ? "검색 중..." : !string.IsNullOrEmpty(Tuf.Error) ? Tuf.Error : $"총 {Tuf.Total:N0}개   ·   {Tuf.MinName} ~ {Tuf.MaxName}   ·   {Tuf.SortName} {(Tuf.Asc ? "낮은 순" : "높은 순")}", S_small);
             GUILayout.Space(4);
 
             // ---- 목록 ----
             _sTuf = GUILayout.BeginScrollView(_sTuf, GUILayout.ExpandHeight(true));
+            DrawTufRows();
+            GUILayout.EndScrollView();
+            GUILayout.Space(8);
+
+            if (_tufSel != null)
+                GUILayout.Label($"<b>{Esc(Trim(_tufSel.Song, 40))}</b>  <color=#{HexOf(C_sub)}>TUF #{_tufSel.Id} · {Esc(_tufSel.Diff)}</color>", S_txt);
+            GUILayout.Label("모두가 TUF에서 직접 받아요 (실패하면 방장에게서 받아요). 받아둔 맵은 다시 받지 않아요.", S_small);
+            GUI.enabled = !busy && _tufSel != null && _tufSel.CanDownload;
+            if (GUILayout.Button("이 맵으로 시작", S_cta)) { _drawer = false; ShowResults = false; Session.HostDistributeTuf(_tufSel); }
+            GUI.enabled = true;
+        }
+
+        /// <summary>TUF 결과 행들 (스크롤 뷰 안에서 호출)</summary>
+        static void DrawTufRows()
+        {
             foreach (var lv in Tuf.Results)
             {
                 bool sel = _tufSel == lv;
@@ -1020,15 +1051,6 @@ namespace ADOFAIMulti
                 if (GUILayout.Button(Tuf.Loading ? "불러오는 중..." : "더 보기", S_btn) && Runner.Instance != null) Tuf.Search(Runner.Instance, _tufSent ?? "", true);
                 GUI.enabled = true;
             }
-            GUILayout.EndScrollView();
-            GUILayout.Space(8);
-
-            if (_tufSel != null)
-                GUILayout.Label($"<b>{Esc(Trim(_tufSel.Song, 40))}</b>  <color=#{HexOf(C_sub)}>TUF #{_tufSel.Id} · {Esc(_tufSel.Diff)}</color>", S_txt);
-            GUILayout.Label("모두가 TUF에서 직접 받아요 (실패하면 방장에게서 받아요). 받아둔 맵은 다시 받지 않아요.", S_small);
-            GUI.enabled = !busy && _tufSel != null && _tufSel.CanDownload;
-            if (GUILayout.Button("이 맵으로 시작", S_cta)) { _drawer = false; ShowResults = false; Session.HostDistributeTuf(_tufSel); }
-            GUI.enabled = true;
         }
 
         static void DrawLocalTab(bool busy)
@@ -1042,6 +1064,21 @@ namespace ADOFAIMulti
             SearchField(ref _search, "곡명 · 아티스트 · 제작자 검색");
             GUILayout.Space(6);
             _sMaps = GUILayout.BeginScrollView(_sMaps, GUILayout.ExpandHeight(true));
+            DrawLocalRows();
+            GUILayout.EndScrollView();
+            GUILayout.Space(8);
+            GUILayout.BeginHorizontal();
+            _mapPath = GUILayout.TextField(_mapPath, S_field);
+            if (GUILayout.Button("최근 맵", S_iconBtn, GUILayout.Width(90))) _mapPath = Game.DefaultLevelPath();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(6);
+            GUI.enabled = !busy && !string.IsNullOrEmpty(_mapPath);
+            if (GUILayout.Button("이 맵으로 시작", S_cta)) { _drawer = false; ShowResults = false; Session.HostDistribute(_mapPath.Trim().Trim('"')); }
+            GUI.enabled = true;
+        }
+
+        static void DrawLocalRows()
+        {
             var q = _search.Trim();
             int shown = 0;
             foreach (var it in MapBrowser.Items)
@@ -1057,16 +1094,6 @@ namespace ADOFAIMulti
                 GUI.Label(new Rect(rr.x + 16, rr.y + 29, rr.width - 32, 20), Trim(sub, 70), S_small);
             }
             if (MapBrowser.Items.Count == 0 && !MapBrowser.Scanning) GUILayout.Label("맵을 못 찾았어요. 아래에 .adofai 경로를 직접 넣어주세요.", S_para);
-            GUILayout.EndScrollView();
-            GUILayout.Space(8);
-            GUILayout.BeginHorizontal();
-            _mapPath = GUILayout.TextField(_mapPath, S_field);
-            if (GUILayout.Button("최근 맵", S_iconBtn, GUILayout.Width(90))) _mapPath = Game.DefaultLevelPath();
-            GUILayout.EndHorizontal();
-            GUILayout.Space(6);
-            GUI.enabled = !busy && !string.IsNullOrEmpty(_mapPath);
-            if (GUILayout.Button("이 맵으로 시작", S_cta)) { _drawer = false; ShowResults = false; Session.HostDistribute(_mapPath.Trim().Trim('"')); }
-            GUI.enabled = true;
         }
 
         // ---- 커스텀 테마 편집 상태 ----

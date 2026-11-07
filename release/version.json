@@ -1,7 +1,7 @@
 {
-  "Version": "0.13.0",
+  "Version": "0.14.0",
   "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
   "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
-  "Sha256": "35f7034bb55707d8b4803a0d385cf36d963996da89e97b48efbdc52f09241937",
-  "Notes": "UI 설계판 반영: 입구 카드 압축, 프로필(닉네임), 로비 단계 표시 제거, 인게임 순위표 왼쪽 위"
+  "Sha256": "2394d1472e8b5aa771371269517c323179ec14a09380efd3f67434f2342435b9",
+  "Notes": "UI 설계판 배치를 게임에 그대로 적용 (설계 바뀌면 자동 반영)"
 }

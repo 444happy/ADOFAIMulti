@@ -44,9 +44,10 @@ dotnet "$CSC" -nologo -noconfig -nostdlib -target:exe -platform:anycpu -langvers
 
 # 4) 릴리스 파일
 cp "$BUILD/ADOFAIMulti.dll" "$BUILD/Info.json" "$OUT/"
+cp "$ROOT/design/layout.json" "$OUT/layout.json"
 echo "wss://adofai-multi-relay.444happy123.workers.dev" > "$OUT/relay.txt"
 TMP=$(mktemp -d); mkdir -p "$TMP/umm/ADOFAIMulti" "$TMP/inst"
-cp "$BUILD/ADOFAIMulti.dll" "$BUILD/Info.json" "$TMP/umm/ADOFAIMulti/"
+cp "$BUILD/ADOFAIMulti.dll" "$BUILD/Info.json" "$ROOT/design/layout.json" "$TMP/umm/ADOFAIMulti/"
 (cd "$TMP/umm" && zip -q -r -X "$OUT/ADOFAIMulti_UMM.zip" ADOFAIMulti </dev/null)
 cp "$BUILD/ADOFAIMulti_Installer.exe" "$TMP/inst/"
 printf '1. UnityModManager(UMM)를 먼저 설치하세요: https://www.nexusmods.com/site/mods/21\r\n2. 얼불춤을 끄고 ADOFAIMulti_Installer.exe 실행 -> 1 입력\r\n3. "Windows의 PC 보호" 창이 뜨면 "추가 정보 -> 실행"\r\n4. 메인 섬에 생기는 "멀티" 포탈로 이동\r\n5. 이후 업데이트는 게임 실행 시 자동으로 받아집니다 (재시작하면 적용)\r\n' > "$TMP/inst/읽어주세요.txt"
