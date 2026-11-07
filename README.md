@@ -1,31 +1,49 @@
 # ADOFAI Multi (얼불춤 멀티)
 
-A Dance of Fire and Ice 친구끼리 멀티 모드 (UnityModManager)
+A Dance of Fire and Ice를 친구끼리 같이 플레이하는 멀티 모드 (UnityModManager)
 
-- Steam 로비 + P2P (서버/포트포워딩 불필요, 친구 초대로 입장, 최대 8명)
-- 방장이 고른 맵을 모두에게 자동 전송 (일시정지/재개/취소, 캐시)
-- 무적 모드 고정, 전원 준비(F5) 후 동시 시작
-- 플레이 중 왼쪽 실시간 정확도 랭킹, 끝나면 세부 판정 결과
-- 메인 섬의 "멀티" 포탈로 입장하는 전용 멀티 섬, 멀티 중 ESC·재시작 차단, 기권 Ctrl + Shift + Q
-- 방장이 TUF(The Universal Forums)에서 맵을 검색해 고르면 모두가 TUF CDN에서 직접 다운로드
+**[⬇ 다운로드 (최신 버전)](https://github.com/444happy/ADOFAIMulti/raw/main/release/ADOFAIMulti_Installer.zip)** · [릴리스 목록](https://github.com/444happy/ADOFAIMulti/releases)
+
+## 기능
+- 방 만들기 / 참가 코드로 입장 (공개·비공개 방, 최대 8명)
+- 방장이 고른 맵을 모두에게 자동 전송, TUF(The Universal Forums) 맵 검색
+- 방 채팅
+- 레벨 안에서 아무 키나 눌러 준비 → 모두 준비하면 동시 시작
+- 플레이 중 실시간 절대 정확도 랭킹, 모두 끝나면 랭킹 창 (절대 정확도 · 세부 판정)
+- 멀티 중 무적 모드 고정, 기권 Ctrl + Shift + Q
 - 게임 실행 시 자동 업데이트 (재시작하면 적용)
 
-## 설치 (가장 쉬운 방법)
+## 설치
 
-게임을 끈 상태에서 **PowerShell**(시작 → "PowerShell" 검색)을 열고 아래 한 줄을 붙여넣으세요.
+먼저 [UnityModManager(UMM)](https://www.nexusmods.com/site/mods/21)를 설치하고, 얼불춤을 꺼주세요.
+
+### 방법 1. PowerShell 한 줄 (추천)
+
+시작 → "PowerShell" 검색 → 열고 아래 한 줄을 붙여넣기:
 
 ```powershell
 irm https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/install.ps1 | iex
 ```
 
-파일을 내려받지 않아서 브라우저/백신 경고가 뜨지 않아요. UnityModManager(UMM)는 먼저 설치되어 있어야 해요.
+파일을 내려받지 않아서 브라우저·Windows 경고가 뜨지 않아요.
 
-## 설치
-1. [UnityModManager](https://www.nexusmods.com/site/mods/21) 설치
-2. 다운로드
-   - [ADOFAIMulti_Installer.zip](https://github.com/444happy/ADOFAIMulti/raw/main/release/ADOFAIMulti_Installer.zip) → 압축 풀고 설치기 실행, 또는
-   - [ADOFAIMulti_UMM.zip](https://github.com/444happy/ADOFAIMulti/raw/main/release/ADOFAIMulti_UMM.zip) → UMM의 Mods 탭에 그대로 드래그
-3. 게임 실행 → 메인 메뉴 오른쪽 아래 **멀티플레이**
+### 방법 2. 설치기
+
+1. [ADOFAIMulti_Installer.zip](https://github.com/444happy/ADOFAIMulti/raw/main/release/ADOFAIMulti_Installer.zip) 다운로드 → 압축 풀기
+2. `ADOFAIMulti_Installer.exe` 실행 → `1` 입력
+
+> ⚠️ **Windows 경고 안내**
+> 설치기는 코드 서명이 안 된 exe라서 **"Windows의 PC 보호"** 창이 뜰 수 있어요.
+> **추가 정보 → 실행**을 누르면 설치돼요. 브라우저가 다운로드를 막으면 "유지"를 눌러주세요.
+> 경고가 싫으면 방법 1이나 방법 3을 쓰세요.
+
+### 방법 3. UMM에 직접
+
+[ADOFAIMulti_UMM.zip](https://github.com/444happy/ADOFAIMulti/raw/main/release/ADOFAIMulti_UMM.zip)을 UMM의 Mods 탭에 그대로 드래그
+
+### 설치 후
+
+게임 실행 → 메인 섬에 생긴 **"멀티" 포탈**로 이동. 친구와 **버전이 같아야** 같은 방에 들어갈 수 있어요 (게임을 켜면 자동으로 최신 버전을 받고, 재시작하면 적용).
 
 ## 빌드
 게임의 `A Dance of Fire and Ice_Data/Managed` DLL을 참조해 `make_release.sh <owner>`로 빌드합니다. (게임 DLL은 저장소에 포함하지 않습니다)
