@@ -119,7 +119,7 @@ namespace ADOFAIMulti
             if (S_h1 != null && Time.unscaledTime - _builtAt < 0.08f) return;
             var th = Theme.Current; _builtVer = Theme.Version; _builtAt = Time.unscaledTime;
             foreach (var old in _owned) if (old != null) Object.Destroy(old);
-            _owned.Clear(); _swatches.Clear(); _pillTex.Clear(); _avTex.Clear(); _lBox.Clear();
+            _owned.Clear(); _swatches.Clear(); _pillTex.Clear(); _avTex.Clear(); _lBox.Clear(); _freeH.Clear();
             _labelCache.Clear();
             C_bg = th.Bg; C_side = th.Side; C_card = th.Card; C_cardHi = th.CardHi; C_line = th.Line; C_acc = th.Acc; C_acc2 = th.Acc2;
             C_txt = th.Txt; C_sub = th.Sub; C_fire = th.Fire; C_ice = th.Ice; C_gold = th.Gold; C_ok = th.Ok;

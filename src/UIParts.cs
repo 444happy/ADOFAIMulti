@@ -218,6 +218,8 @@ namespace ADOFAIMulti
             return hit;
         }
 
+        static readonly Dictionary<GUIStyle, GUIStyle> _freeH = new Dictionary<GUIStyle, GUIStyle>();
+
         /// <summary>모두 같은 크기인 버튼들 (오른쪽 정렬). 누른 번호, 없으면 -1</summary>
         static int ModalButtonsSame(Rect content, params (string text, GUIStyle style)[] btns)
         {
@@ -228,7 +230,9 @@ namespace ADOFAIMulti
             for (int i = btns.Length - 1; i >= 0; i--)
             {
                 x -= w;
-                if (GUI.Button(new Rect(x, y, w, bh), btns[i].text, btns[i].style)) hit = i;
+                // 스타일마다 고정 높이(40/46)가 달라서, 높이를 풀어 모두 같은 칸을 채우게 함
+                if (!_freeH.TryGetValue(btns[i].style, out var st)) _freeH[btns[i].style] = st = new GUIStyle(btns[i].style) { fixedHeight = 0, fixedWidth = 0, fontSize = 15, fontStyle = FontStyle.Bold };
+                if (GUI.Button(new Rect(x, y, w, bh), btns[i].text, st)) hit = i;
                 x -= 10;
             }
             return hit;

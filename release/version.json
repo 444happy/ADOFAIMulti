@@ -1,7 +1,7 @@
 {
-  "Version": "0.21.0",
+  "Version": "0.21.1",
   "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
   "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
-  "Sha256": "e3a7a08990a5a25643bc8fa42d11888bd25a0d308bded9d16176fbaab317aa88",
-  "Notes": "채팅 추가, 방 화면 정리 (메인 버튼을 방 설정 카드로, 안내 문구 삭제), 나가기 팝업 정리"
+  "Sha256": "eaba972a1a5e61e20bb7a33d0be4492d78a90022c0b246bf0fbbe1ef54407320",
+  "Notes": "나가기 팝업 버튼 크기 통일"
 }
