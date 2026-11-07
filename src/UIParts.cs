@@ -202,13 +202,14 @@ namespace ADOFAIMulti
         /// <summary>모달 아래 버튼 줄 (오른쪽 정렬). 누른 버튼 번호, 없으면 -1</summary>
         static int ModalButtons(Rect content, params (string text, bool primary, bool enabled)[] btns)
         {
-            float bh = 46, x = content.xMax, y = content.yMax - bh;
+            // 모든 팝업 버튼을 같은 크기로 (가장 긴 글자에 맞춘 폭, 같은 높이·글자 크기)
+            float bh = 46, w = 120, x = content.xMax, y = content.yMax - bh;
+            foreach (var b in btns) w = Mathf.Max(w, FreeH(b.primary ? S_btnAcc : S_btn).CalcSize(new GUIContent(b.text)).x + 24);
             int hit = -1;
             for (int i = btns.Length - 1; i >= 0; i--)
             {
                 var b = btns[i];
-                var st = b.primary ? S_btnAcc : S_btn;
-                float w = Mathf.Max(120, st.CalcSize(new GUIContent(b.text)).x + 24);
+                var st = FreeH(b.primary ? S_btnAcc : S_btn);
                 x -= w;
                 var o = GUI.enabled; GUI.enabled = o && b.enabled;
                 if (GUI.Button(new Rect(x, y, w, bh), b.text, st)) hit = i;
@@ -219,20 +220,24 @@ namespace ADOFAIMulti
         }
 
         static readonly Dictionary<GUIStyle, GUIStyle> _freeH = new Dictionary<GUIStyle, GUIStyle>();
+        /// <summary>스타일마다 고정 높이(40/46)·글자 크기가 달라서, 높이를 풀고 글자를 맞춘 복사본</summary>
+        static GUIStyle FreeH(GUIStyle s)
+        {
+            if (!_freeH.TryGetValue(s, out var st)) _freeH[s] = st = new GUIStyle(s) { fixedHeight = 0, fixedWidth = 0, fontSize = 15, fontStyle = FontStyle.Bold };
+            return st;
+        }
 
         /// <summary>모두 같은 크기인 버튼들 (오른쪽 정렬). 누른 번호, 없으면 -1</summary>
         static int ModalButtonsSame(Rect content, params (string text, GUIStyle style)[] btns)
         {
             float bh = 46, w = 120;
-            foreach (var b in btns) w = Mathf.Max(w, b.style.CalcSize(new GUIContent(b.text)).x + 24);
+            foreach (var b in btns) w = Mathf.Max(w, FreeH(b.style).CalcSize(new GUIContent(b.text)).x + 24);
             float x = content.xMax, y = content.yMax - bh;
             int hit = -1;
             for (int i = btns.Length - 1; i >= 0; i--)
             {
                 x -= w;
-                // 스타일마다 고정 높이(40/46)가 달라서, 높이를 풀어 모두 같은 칸을 채우게 함
-                if (!_freeH.TryGetValue(btns[i].style, out var st)) _freeH[btns[i].style] = st = new GUIStyle(btns[i].style) { fixedHeight = 0, fixedWidth = 0, fontSize = 15, fontStyle = FontStyle.Bold };
-                if (GUI.Button(new Rect(x, y, w, bh), btns[i].text, st)) hit = i;
+                if (GUI.Button(new Rect(x, y, w, bh), btns[i].text, FreeH(btns[i].style))) hit = i;
                 x -= 10;
             }
             return hit;

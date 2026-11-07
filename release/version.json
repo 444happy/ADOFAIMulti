@@ -1,7 +1,7 @@
 {
-  "Version": "0.21.1",
+  "Version": "0.21.2",
   "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
   "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
-  "Sha256": "eaba972a1a5e61e20bb7a33d0be4492d78a90022c0b246bf0fbbe1ef54407320",
-  "Notes": "나가기 팝업 버튼 크기 통일"
+  "Sha256": "95397e969623359501f78725042cdef7bee3392370c5561d196533fba042ed8c",
+  "Notes": "팝업 버튼 크기 통일, 맵 선택 버튼 상시 표시, 게임 시작에 준비 n/n"
 }

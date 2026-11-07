@@ -396,9 +396,7 @@ namespace ADOFAIMulti
                 case "Steam 초대": if (Net.CanInvite) LButton(e, r, true, Net.InviteOverlay); return;
                 case "플레이어 명단": LBox(r, e.Fill, e.Stroke, e.Radius); { var o = GUI.enabled; GUI.enabled = !_lBlocked && o; DrawLineup(r, false); GUI.enabled = o; } return;
                 case "맵 고르기 열기": case "맵 선택 열기":
-                    // 맵이 없을 때는 메인 버튼이 "맵 선택"이라 숨김 (맵이 정해진 뒤 다른 맵으로 바꿀 때만)
-                    if (host && !(_layoutMainBtn && Session.MapHash == null))
-                        LButton(e, r, !busy, () => { _drawer = true; _drawerTab = 1; }, Session.MapHash != null && !string.IsNullOrEmpty(e.Text) && e.Text.Contains("맵 선택") ? e.Text.Replace("맵 선택", "다른 맵 선택") : null);
+                    if (host) LButton(e, r, !busy, () => { _drawer = true; _drawerTab = 1; });
                     return;
                 case "한 판 더":
                     if (host && !Game.IsScnGame && Session.MapHash != null && !string.IsNullOrEmpty(Session.HostLevelPath) && (Session.Phase == Phase.Lobby || Session.Phase == Phase.Results || ShowResults))
@@ -641,7 +639,7 @@ namespace ADOFAIMulti
                 else if (ph == Phase.Lobby && Session.MapHash == null) { label = "맵 선택"; sub = "TUF · 내 컴퓨터"; icon = "search"; act = () => { _drawer = true; _drawerTab = 1; }; }
                 else if (ph == Phase.Lobby) { label = "한 판 더"; sub = "같은 맵으로"; icon = "refresh"; on = !string.IsNullOrEmpty(Session.HostLevelPath); act = Session.HostRedo; }
                 else if (ph == Phase.Packing) { label = "맵 준비 중"; sub = Session.HostFetchProgress >= 0 ? $"{Session.HostFetchProgress * 100:0}%" : "잠시만요"; on = false; }
-                else if (ph == Phase.Distributing) { label = "게임 시작"; sub = Session.CanStart ? "모두 준비 완료" : $"준비 {Session.ReadyCount}/{Session.ReadyNeeded}"; icon = "play"; on = Session.CanStart; act = Session.HostStart; }
+                else if (ph == Phase.Distributing) { label = "게임 시작"; sub = $"준비 {Session.ReadyCount}/{Session.ReadyNeeded}"; icon = "play"; on = Session.CanStart; act = Session.HostStart; }
                 else if (ph == Phase.Results) { label = "결과 발표"; sub = "지금 바로"; icon = "trophy"; act = Session.HostShowResults; }
                 else { label = "게임 진행 중"; on = false; }
             }
