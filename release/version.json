@@ -1,7 +1,7 @@
 {
-  "Version": "0.11.2",
+  "Version": "0.12.0",
   "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
   "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
-  "Sha256": "05aed3f1443fdfd9a6f69c8a385435c008c25d34732cefa847338c170790d2d7",
-  "Notes": "일부 PC에서 시작 시 오류창(MethodAccessException)이 뜨던 문제 수정"
+  "Sha256": "94b185a5ee1b86912be5bf79d296206e263d05e543c98cbb2c1a8419b69af959",
+  "Notes": "TUF 맵 고르기 개편: 난이도 범위·특수 난이도·정렬(클리어/좋아요/BPM 등)·난이도 아이콘"
 }

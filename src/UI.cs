@@ -867,37 +867,152 @@ namespace ADOFAIMulti
             }
         }
 
+        static bool _tufSortOpen, _tufDirty;
+        static int _tufDrag = -1;                      // 난이도 막대에서 잡은 손잡이 (0 최소, 1 최대)
+
+        static void TufChip(string text, ref bool on)
+        {
+            if (GUILayout.Button(text, on ? S_rowOn : S_row, GUILayout.Width(Label(14, C_txt).CalcSize(new GUIContent(text)).x + 40))) { on = !on; _tufDirty = true; }
+        }
+
+        /// <summary>P1 ~ U20 난이도 범위 막대 (손잡이 두 개를 끌어서 조절)</summary>
+        static void TufDiffRange()
+        {
+            var area = GUILayoutUtility.GetRect(100, 58, GUILayout.ExpandWidth(true));
+            int n = Mathf.Max(1, Tuf.Pgu.Count);
+            float x0 = area.x + 18, x1 = area.xMax - 18, ty = area.y + 34;
+            float Pos(int i) => n <= 1 ? x0 : Mathf.Lerp(x0, x1, i / (float)(n - 1));
+            int IdxAt(float x) => Mathf.Clamp(Mathf.RoundToInt((x - x0) / Mathf.Max(1, x1 - x0) * (n - 1)), 0, n - 1);
+
+            // 색 막대 (선택 밖은 흐리게)
+            for (int i = 0; i < n; i++)
+            {
+                float a = Pos(i) - (x1 - x0) / (n - 1f) / 2f, b = Pos(i) + (x1 - x0) / (n - 1f) / 2f;
+                a = Mathf.Max(a, x0); b = Mathf.Min(b, x1);
+                Color c = Tuf.Pgu.Count > 0 ? Tuf.Pgu[i].Color : C_acc;
+                bool inside = i >= Tuf.MinIdx && i <= Tuf.MaxIdx;
+                Fill(new Rect(a, ty - 4, b - a + 0.5f, 8), inside ? c : A(c, 0.18f));
+            }
+
+            // 입력: 가까운 손잡이를 잡고 끌기, 놓으면 검색
+            var ev = Event.current;
+            var hit = new Rect(area.x, area.y + 8, area.width, area.height - 8);
+            if (ev.type == EventType.MouseDown && ev.button == 0 && hit.Contains(ev.mousePosition) && Tuf.Pgu.Count > 0)
+            {
+                int i = IdxAt(ev.mousePosition.x);
+                _tufDrag = i <= Tuf.MinIdx ? 0 : i >= Tuf.MaxIdx ? 1 : (i - Tuf.MinIdx <= Tuf.MaxIdx - i ? 0 : 1);
+                ev.Use();
+            }
+            if (_tufDrag >= 0 && (ev.type == EventType.MouseDrag || ev.type == EventType.MouseDown))
+            {
+                int i = IdxAt(ev.mousePosition.x);
+                if (_tufDrag == 0) Tuf.MinIdx = Mathf.Min(i, Tuf.MaxIdx); else Tuf.MaxIdx = Mathf.Max(i, Tuf.MinIdx);
+                if (ev.type == EventType.MouseDrag) ev.Use();
+            }
+            if (_tufDrag >= 0 && (ev.type == EventType.MouseUp || ev.rawType == EventType.MouseUp)) { _tufDrag = -1; _tufDirty = true; }
+
+            // 손잡이 (난이도 아이콘, 없으면 이름)
+            for (int h = 0; h < 2; h++)
+            {
+                int idx = h == 0 ? Tuf.MinIdx : Tuf.MaxIdx;
+                string name = h == 0 ? Tuf.MinName : Tuf.MaxName;
+                Color c = Tuf.Pgu.Count > 0 ? Tuf.Pgu[Mathf.Clamp(idx, 0, n - 1)].Color : C_acc;
+                float cx = Pos(Mathf.Clamp(idx, 0, n - 1));
+                var hr = new Rect(cx - 15, ty - 15, 30, 30);
+                var ic = Tuf.Icon(name);
+                if (ic != null) GUI.DrawTexture(hr, ic, ScaleMode.ScaleToFit);
+                else Pill(hr, Esc(name), c);
+                float lx = Mathf.Clamp(cx - 30, area.x, area.xMax - 60);
+                GUI.Label(new Rect(lx, area.y, 60, 16), Esc(name), Label(13, c, FontStyle.Bold, TextAnchor.MiddleCenter));
+            }
+        }
+
         static void DrawTufTab(bool busy)
         {
             var before = _tufQuery;
             SearchField(ref _tufQuery, "곡명 · 아티스트 · 제작자로 TUF 검색");
             if (_tufQuery != before) _tufTypedAt = Time.unscaledTime;
-            // 입력이 멈추고 0.4초 뒤 검색 (첫 진입 시 최신 레벨)
-            if (_tufSent == null || (_tufQuery != _tufSent && Time.unscaledTime - _tufTypedAt > 0.4f))
+
+            // ---- 필터 ----
+            GUILayout.Space(4);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("난이도", S_sub, GUILayout.Width(60));
+            GUILayout.FlexibleSpace();
+            GUILayout.Label("특수 난이도", S_small);
+            TufChip("미평가", ref Tuf.IncUnranked);
+            TufChip("Q", ref Tuf.IncQ);
+            TufChip("기타", ref Tuf.IncEtc);
+            GUILayout.EndHorizontal();
+            TufDiffRange();
+
+            // ---- 정렬 ----
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("정렬", S_sub, GUILayout.Width(60));
+            if (GUILayout.Button(Tuf.SortName, _tufSortOpen ? S_rowOn : S_row, GUILayout.Width(150))) _tufSortOpen = !_tufSortOpen;
+            if (GUILayout.Button("높은 순", !Tuf.Asc ? S_rowOn : S_row, GUILayout.Width(90))) { if (Tuf.Asc) { Tuf.Asc = false; _tufDirty = true; } }
+            if (GUILayout.Button("낮은 순", Tuf.Asc ? S_rowOn : S_row, GUILayout.Width(90))) { if (!Tuf.Asc) { Tuf.Asc = true; _tufDirty = true; } }
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button("초기화", S_iconBtn, GUILayout.Width(80)))
             {
+                Tuf.MinIdx = 0; Tuf.MaxIdx = Mathf.Max(0, Tuf.Pgu.Count - 1); Tuf.IncUnranked = Tuf.IncQ = Tuf.IncEtc = true;
+                Tuf.Sort = "CLEARS"; Tuf.Asc = false; _tufSortOpen = false; _tufDirty = true;
+            }
+            GUILayout.EndHorizontal();
+            if (_tufSortOpen)
+            {
+                for (int row = 0; row < 2; row++)
+                {
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Space(64);
+                    for (int i = row * 5; i < row * 5 + 5 && i < Tuf.SortKeys.Length; i++)
+                        if (GUILayout.Button(Tuf.SortNames[i], Tuf.Sort == Tuf.SortKeys[i] ? S_rowOn : S_row, GUILayout.Width(104)))
+                        { Tuf.Sort = Tuf.SortKeys[i]; _tufSortOpen = false; _tufDirty = true; }
+                    GUILayout.EndHorizontal();
+                }
+            }
+
+            // 입력이 멈추고 0.4초 뒤 / 필터를 바꾸면 바로 검색 (첫 진입 시 기본 정렬)
+            if (_tufSent == null || _tufDirty || (_tufQuery != _tufSent && Time.unscaledTime - _tufTypedAt > 0.4f))
+            {
+                _tufDirty = false;
                 _tufSent = _tufQuery; _tufSel = null; _sTuf = Vector2.zero;
                 if (Runner.Instance != null) Tuf.Search(Runner.Instance, _tufQuery);
             }
-            GUILayout.Label(Tuf.Loading && Tuf.Results.Count == 0 ? "검색 중..." : !string.IsNullOrEmpty(Tuf.Error) ? Tuf.Error : $"{Tuf.Total:N0}개 레벨   ·   The Universal Forums", S_small);
+            GUILayout.Space(2);
+            GUILayout.Label(Tuf.Loading && Tuf.Results.Count == 0 ? "검색 중..." : !string.IsNullOrEmpty(Tuf.Error) ? Tuf.Error : $"총 {Tuf.Total:N0}개   ·   {Tuf.MinName} ~ {Tuf.MaxName}   ·   {Tuf.SortName} {(Tuf.Asc ? "낮은 순" : "높은 순")}", S_small);
             GUILayout.Space(4);
 
+            // ---- 목록 ----
             _sTuf = GUILayout.BeginScrollView(_sTuf, GUILayout.ExpandHeight(true));
             foreach (var lv in Tuf.Results)
             {
                 bool sel = _tufSel == lv;
-                var rr = GUILayoutUtility.GetRect(100, 60, GUILayout.ExpandWidth(true));
+                var rr = GUILayoutUtility.GetRect(100, 76, GUILayout.ExpandWidth(true));
                 if (GUI.Button(rr, "", sel ? S_rowOn : S_row)) _tufSel = lv;
-                float right = rr.xMax - 12;
-                if (!string.IsNullOrEmpty(lv.Diff))
-                {
-                    float w = 22 + Label(12, C_txt, FontStyle.Bold).CalcSize(new GUIContent(lv.Diff)).x;
-                    right -= w;
-                    Pill(new Rect(right, rr.y + 10, w, 22), Esc(lv.Diff), lv.DiffColor);
-                }
-                GUI.Label(new Rect(rr.x + 16, rr.y + 8, right - rr.x - 24, 24), Trim(lv.Song, 46), Label(16, sel ? C_acc : C_txt, FontStyle.Bold));
-                string sub = string.Join("  ·  ", new[] { Trim(lv.Artist, 26), string.IsNullOrEmpty(lv.Creator) ? "" : "제작 " + Trim(lv.Creator, 20), lv.Bpm > 0 ? $"{lv.Bpm:0} BPM" : "", lv.LengthText }.Where(x => !string.IsNullOrEmpty(x)).ToArray());
-                GUI.Label(new Rect(rr.x + 16, rr.y + 32, rr.width - 32, 20), sub + (lv.CanDownload ? "" : $"  <color=#{HexOf(C_fire)}>다운로드 링크 없음</color>"), S_small);
+
+                // 난이도 아이콘
+                var ir = new Rect(rr.x + 12, rr.y + 15, 46, 46);
+                var ic = Tuf.Icon(lv.Diff);
+                if (ic != null) GUI.DrawTexture(ir, ic, ScaleMode.ScaleToFit);
+                else if (!string.IsNullOrEmpty(lv.Diff)) Pill(new Rect(ir.x - 4, ir.y + 12, 54, 22), Esc(Trim(lv.Diff, 6)), lv.DiffColor);
+
+                // 오른쪽: 클리어 · 좋아요
+                float rw = 96;
+                var rc = new Rect(rr.xMax - rw - 12, rr.y + 12, rw, 26);
+                GUI.Label(rc, $"<b>{lv.Clears:N0}</b> <size=12>클리어</size>", Label(16, C_acc, FontStyle.Normal, TextAnchor.MiddleRight));
+                GUI.Label(new Rect(rc.x, rc.y + 26, rw, 24), $"<b>{lv.Likes:N0}</b> <size=12>좋아요</size>", Label(14, C_fire, FontStyle.Normal, TextAnchor.MiddleRight));
+
+                float tx = rr.x + 70, tw = rc.x - tx - 10;
+                GUI.Label(new Rect(tx, rr.y + 6, tw, 18), $"#{lv.Id}  ·  {Esc(Trim(lv.Artist, 34))}", Label(12, C_sub));
+                GUI.Label(new Rect(tx, rr.y + 23, tw, 26), Esc(Trim(lv.Song, 40)), Label(17, sel ? C_acc : C_txt, FontStyle.Bold));
+                string info = string.Join("   ", new[] {
+                    lv.LengthText.Length > 0 ? "길이 " + lv.LengthText : "",
+                    lv.Tiles > 0 ? $"타일 {lv.Tiles:N0}" : "",
+                    lv.Bpm > 0 ? $"BPM {lv.Bpm:0.##}" : "",
+                    string.IsNullOrEmpty(lv.Creator) ? "" : "제작 " + Esc(Trim(lv.Creator, 22)) }.Where(x => x.Length > 0).ToArray());
+                GUI.Label(new Rect(tx, rr.y + 50, tw, 20), info, S_small);
             }
+            if (Tuf.Results.Count == 0 && !Tuf.Loading && string.IsNullOrEmpty(Tuf.Error)) GUILayout.Label("조건에 맞는 레벨이 없어요. 난이도 범위나 검색어를 바꿔보세요.", S_para);
             if (Tuf.HasMore)
             {
                 GUILayout.Space(6);
@@ -909,7 +1024,7 @@ namespace ADOFAIMulti
             GUILayout.Space(8);
 
             if (_tufSel != null)
-                GUILayout.Label($"<b>{Trim(_tufSel.Song, 40)}</b>  <color=#{HexOf(C_sub)}>TUF #{_tufSel.Id}</color>", S_txt);
+                GUILayout.Label($"<b>{Esc(Trim(_tufSel.Song, 40))}</b>  <color=#{HexOf(C_sub)}>TUF #{_tufSel.Id} · {Esc(_tufSel.Diff)}</color>", S_txt);
             GUILayout.Label("모두가 TUF에서 직접 받아요 (실패하면 방장에게서 받아요). 받아둔 맵은 다시 받지 않아요.", S_small);
             GUI.enabled = !busy && _tufSel != null && _tufSel.CanDownload;
             if (GUILayout.Button("이 맵으로 시작", S_cta)) { _drawer = false; ShowResults = false; Session.HostDistributeTuf(_tufSel); }
