@@ -19,7 +19,7 @@ A Dance of Fire and Ice를 친구끼리 같이 플레이하는 멀티 모드 (Un
 
 1. 얼불춤을 끄고 [ADOFAIMulti_Installer.exe](https://github.com/444happy/ADOFAIMulti/raw/main/release/ADOFAIMulti_Installer.exe) 실행
 2. 게임 폴더는 자동으로 찾아요 (못 찾으면 "찾아보기")
-3. **설치** 클릭 → 끝나면 **게임 실행**
+3. [다음] → [설치] → [마침] (얼불춤 실행 체크 시 바로 게임이 켜져요)
 
 UnityModManager(UMM)가 없으면 설치기가 같이 설치해요. 따로 받을 필요 없어요.
 

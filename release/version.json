@@ -2,6 +2,6 @@
   "Version": "0.23.0",
   "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
   "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
-  "Sha256": "49d8e2451813f4e9ec68b6d84bd64e68eaf66f6eb432d75aa50317f90ab86e80",
-  "Notes": "창으로 된 설치기 (UMM 자동 설치)"
+  "Sha256": "23cf3249648616201f7e07b26554cab71e87dda1c0a7b6b1068a184bed81dd9d",
+  "Notes": "설치 마법사"
 }
