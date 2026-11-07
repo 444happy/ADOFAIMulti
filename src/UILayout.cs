@@ -272,13 +272,7 @@ namespace ADOFAIMulti
                 case "업데이트 확인": LButton(e, r, Runner.Instance != null, () => Updater.CheckNow(Runner.Instance)); return;
                 case "알림 메시지":
                     LBox(r, e.Fill, e.Stroke, e.Radius);
-                    if (inRoom)
-                    {
-                        float head = string.IsNullOrEmpty(e.Text) ? 0 : LS(e.Size) * 1.6f + LS(8);
-                        LText(e, r, Tok(e.Text));
-                        StatusPanel(new Rect(r.x + LS(20), r.y + head + LS(10), r.width - LS(40), r.height - head - LS(26)));
-                    }
-                    else LText(e, r, Esc(string.IsNullOrEmpty(Session.Notice) ? Net.Status : Session.Notice));
+                    LText(e, r, Esc(string.IsNullOrEmpty(Session.Notice) ? Net.Status : Session.Notice));
                     return;
 
                 // ---- 입구 ----
@@ -294,7 +288,7 @@ namespace ADOFAIMulti
                             var ir = GUILayoutUtility.GetRect(10, LS(56), GUILayout.ExpandWidth(true));
                             Icons.Draw(new Rect(ir.center.x - LS(28), ir.y, LS(56), LS(56)), "users", A(C_sub, 0.5f));
                             GUILayout.Space(LS(14));
-                            GUILayout.Label("지금 열린 공개 방이 없어요", Label(LS(22), C_txt, FontStyle.Bold, TextAnchor.MiddleCenter));
+                            GUILayout.Label("열린 공개 방 없음", Label(LS(22), C_txt, FontStyle.Bold, TextAnchor.MiddleCenter));
                         }
                         else if (!RoomList.Loaded)
                         {
@@ -317,7 +311,7 @@ namespace ADOFAIMulti
                     bool can = !inRoom || host;
                     LToggle(e, r, wantPrivate ? !pub : pub, () =>
                     {
-                        if (inRoom) { if (wantPrivate) AskSetPassword(); else if (!Net.RoomPublic) { Net.SetPublic(true); Session.Notice = "공개 방이 됐어요"; } }
+                        if (inRoom) { if (wantPrivate) AskSetPassword(); else if (!Net.RoomPublic) { Net.SetPublic(true); Session.Notice = "공개 방으로 전환 완료"; } }
                         else _newPublic = !wantPrivate;
                     }, can);
                     return;
@@ -521,9 +515,9 @@ namespace ADOFAIMulti
                     return;
                 case "이 맵으로 시작":
                     if (tufTab) LButton(e, r, !busy && _tufSel != null && _tufSel.CanDownload, () => { _drawer = false; ShowResults = false; Session.HostDistributeTuf(_tufSel); },
-                        _tufSel != null ? null : "{i:music} 목록에서 맵을 고르세요");
+                        null);
                     else LButton(e, r, !busy && !string.IsNullOrEmpty(_mapPath), () => { _drawer = false; ShowResults = false; Session.HostDistribute(_mapPath.Trim().Trim('"')); },
-                        string.IsNullOrEmpty(_mapPath) ? "{i:music} 목록에서 맵을 고르세요" : null);
+                        null);
                     return;
 
                 // ---- 인게임 · 결과 ----
@@ -659,8 +653,8 @@ namespace ADOFAIMulti
                 }
                 else if (Session.CanReady)
                 {
-                    if (Session.MyReady) { label = "준비 완료"; sub = "눌러서 취소 · F5"; icon = "check"; ghost = true; }
-                    else { label = "준비"; sub = "F5"; icon = "check"; }
+                    if (Session.MyReady) { label = "준비 완료"; icon = "check"; ghost = true; }
+                    else { label = "준비"; icon = "check"; }
                     act = Session.ToggleReady;
                 }
                 else if (ph == Phase.Distributing) { label = "맵 확인 중"; on = false; }
@@ -728,99 +722,6 @@ namespace ADOFAIMulti
                     if (Event.current.type == EventType.Repaint) LBox(cr, Hex("171b21"), Hex("3a4452"), 14);
                     GUI.Label(cr, (i + 1).ToString(), Label(LS(14), A(C_sub, 0.7f), FontStyle.Bold, TextAnchor.MiddleCenter));
                 }
-            }
-        }
-
-        // ---------------- 상태 패널 (지금 무슨 일이 일어나는지) ----------------
-        static void StatusPanel(Rect r)
-        {
-            bool host = Net.IsHost;
-            var ph = Session.Phase;
-            string icon = "clock", title, desc; Color ic = C_sub;
-            float big = -1; string bigSub = null;
-
-            if (ShowResults && Session.Results.Count > 0 && ph != Phase.Results) { icon = "trophy"; ic = C_gold; title = "결과 발표 완료"; desc = host ? "같은 맵으로 한 판 더 하거나 다른 맵을 고르세요." : "방장이 다음 판을 고르는 중이에요."; }
-            else if (host)
-            {
-                switch (ph)
-                {
-                    case Phase.Lobby:
-                        if (Session.MapHash == null) { icon = "search"; ic = C_acc; title = "맵을 골라주세요"; desc = "TUF나 내 컴퓨터에서 맵을 고르면 모두에게 자동으로 보내져요. 이미 받은 사람은 건너뛰어요."; }
-                        else { icon = "refresh"; ic = C_acc; title = "다음 판 준비"; desc = "같은 맵으로 한 판 더 하거나, 다른 맵을 선택하세요."; }
-                        break;
-                    case Phase.Packing:
-                        icon = "download"; ic = C_acc; title = "맵 준비 중"; desc = Session.HostFetchProgress >= 0 ? "TUF에서 맵을 받고 있어요. 다 받으면 모두에게 보내요." : "맵을 압축하는 중이에요.";
-                        if (Session.HostFetchProgress >= 0) big = Session.HostFetchProgress;
-                        break;
-                    case Phase.Distributing:
-                        if (Session.CanStart) { icon = "check"; ic = C_ok; title = "모두 준비 완료!"; desc = "시작을 누르면 모두 레벨에 들어가고 바로 카운트다운이 시작돼요."; }
-                        else
-                        {
-                            icon = "clock"; ic = C_gold; title = $"준비 기다리는 중  {Session.ReadyCount}/{Session.ReadyNeeded}";
-                            var wait = Session.Board.Where(x => x.Id != Net.HostId && x.State != PState.Cancelled && !(x.State == PState.HasMap && x.LobbyReady)).Select(x => Trim(x.Name, 10)).ToArray();
-                            desc = wait.Length > 0 ? "아직: " + string.Join(", ", wait) : "모두 맵을 받고 준비(F5)를 눌러야 시작할 수 있어요.";
-                            if (Session.ReadyNeeded == 0) desc = "혼자서도 시작할 수 있어요. 친구를 초대하면 같이 대결해요.";
-                        }
-                        break;
-                    case Phase.Results:
-                        icon = "trophy"; ic = C_gold; title = "결과 기다리는 중"; desc = "아직 플레이 중인 사람이 있어요. 아래 버튼으로 지금 바로 발표할 수 있어요.";
-                        break;
-                    default: icon = "play"; ic = C_ice; title = "게임 진행 중"; desc = "레벨에 들어가는 중이에요..."; break;
-                }
-            }
-            else
-            {
-                switch (ph)
-                {
-                    case Phase.Distributing when Session.DlCancelled:
-                        icon = "close"; title = "관전 모드"; desc = "이번 판은 다운로드를 취소했어요. 다시 받으면 참가할 수 있어요."; break;
-                    case Phase.Distributing when Session.DlActive:
-                    {
-                        icon = Session.DlPaused ? "pause" : "download"; ic = Session.DlPaused ? C_gold : C_acc;
-                        title = Session.DlPaused ? "받기 일시정지됨" : "맵 받는 중";
-                        big = Session.MapSize > 0 ? (float)Session.DlReceived / Session.MapSize : 0;
-                        bigSub = $"{Session.DlReceived / 1048576f:0.0} / {Session.MapSize / 1048576f:0.0}MB";
-                        desc = Session.MapSource == 1 ? "TUF에서 바로 받고 있어요." : "방장에게서 받고 있어요.";
-                        break;
-                    }
-                    case Phase.Distributing:
-                        if (Session.MyReady) { icon = "check"; ic = C_ok; title = "준비 완료!"; desc = "방장이 시작을 누르면 바로 카운트다운이 시작돼요."; }
-                        else if (Session.MyHasMap) { icon = "check"; ic = C_gold; title = "맵 받기 완료 — 준비를 눌러주세요"; desc = "F5 또는 아래 준비 버튼. 모두 준비하면 방장이 시작해요."; }
-                        else { title = "맵 확인 중"; desc = "받은 맵을 확인하고 있어요."; }
-                        break;
-                    case Phase.Results: icon = "trophy"; ic = C_gold; title = "결과 기다리는 중"; desc = "다른 사람이 끝나길 기다리는 중이에요."; break;
-                    case Phase.Lobby:
-                        icon = "clock"; title = Session.MapHash == null ? "방장이 맵을 고르는 중" : "다음 판 기다리는 중";
-                        desc = $"맵이 정해지면 자동으로 받아요.   판정: {Session.JudgeNames[Session.Judge]}"; break;
-                    default: icon = "play"; ic = C_ice; title = "게임 진행 중"; desc = "레벨에 들어가는 중이에요..."; break;
-                }
-            }
-
-            float d = LS(44);
-            var cr = new Rect(r.x, r.y, d, d);
-            Dot(cr.center, d / 2f, A(ic, 0.16f));
-            Icons.Draw(new Rect(cr.x + d * 0.25f, cr.y + d * 0.25f, d * 0.5f, d * 0.5f), icon, ic);
-            float tx = cr.xMax + LS(16), tw = r.xMax - tx;
-            GUI.Label(new Rect(tx, r.y - LS(2), tw, LS(30)), title, Label(LS(21), C_txt, FontStyle.Bold));
-            GUI.Label(new Rect(tx, r.y + LS(30), tw, LS(48)), Esc(desc), Label(LS(15), C_sub, FontStyle.Normal, TextAnchor.UpperLeft, true));
-
-            if (big >= 0)
-            {
-                float by = r.y + LS(92);
-                GUI.Label(new Rect(tx, by, LS(140), LS(48)), $"{big * 100:0}%", Label(LS(40), ic, FontStyle.Bold));
-                if (bigSub != null) GUI.Label(new Rect(tx + LS(140), by + LS(14), tw - LS(140), LS(26)), bigSub, Label(LS(15), C_sub));
-                var br = new Rect(tx, by + LS(58), tw, LS(8));
-                LBox(br, Hex("232a33"), Color.clear, 4);
-                if (big > 0.001f) LBox(new Rect(br.x, br.y, Mathf.Max(br.height, br.width * Mathf.Clamp01(big)), br.height), ic, Color.clear, 4);
-            }
-
-            // 방장: 결과 대기 중이면 지금 발표 (메인 버튼이 없는 설계용)
-            if (host && ph == Phase.Results && !_layoutMainBtn)
-            {
-                var b = new Rect(tx, r.yMax - LS(48), LS(200), LS(44));
-                var o = GUI.enabled; GUI.enabled = !_lBlocked && o;
-                if (GUI.Button(b, "지금 결과 발표", S_btn)) Session.HostShowResults();
-                GUI.enabled = o;
             }
         }
 
@@ -938,7 +839,7 @@ namespace ADOFAIMulti
             else if (ph == Phase.Results)
             {
                 if (results) DrawLayout(Layout.Get("s_results"), false);
-                else if (Session.Results.Count == 0) Banner("완주! 다른 사람을 기다리는 중...");
+                else if (Session.Results.Count == 0) Banner($"완주 · 다른 플레이어 기다리는 중  {Session.Board.Count(x => x.State == PState.Finished)}/{Session.Board.Count(x => x.State >= PState.Loading && x.State != PState.Cancelled)}");
                 else
                 {
                     GUI.DrawTexture(new Rect(0, 0, UnityEngine.Screen.width, UnityEngine.Screen.height), T_dim);

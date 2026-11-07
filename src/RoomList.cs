@@ -45,7 +45,7 @@ namespace ADOFAIMulti
                 Loading = false;
                 if (req.result != UnityWebRequest.Result.Success)
                 {
-                    Error = req.responseCode == 404 ? "서버 업데이트가 필요해요 (방 목록 미지원)" : "방 목록을 불러오지 못했어요";
+                    Error = req.responseCode == 404 ? "서버 업데이트 필요" : "방 목록 불러오기 실패";
                     yield break;
                 }
                 try

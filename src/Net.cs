@@ -159,9 +159,9 @@ namespace ADOFAIMulti
                 req.timeout = 10;
                 yield return req.SendWebRequest();
                 if (req.result != UnityEngine.Networking.UnityWebRequest.Result.Success && req.responseCode != 200)
-                { Status = req.responseCode == 404 ? "서버 업데이트가 필요해요" : "서버에 연결하지 못했어요"; yield break; }
-                JObject j; try { j = JObject.Parse(req.downloadHandler.text); } catch { Status = "서버 응답을 읽지 못했어요"; yield break; }
-                if (!((bool?)j["ok"] ?? false)) { Status = (string)j["msg"] ?? "없는 코드예요"; yield break; }
+                { Status = req.responseCode == 404 ? "서버 업데이트 필요" : "서버 연결 실패"; yield break; }
+                JObject j; try { j = JObject.Parse(req.downloadHandler.text); } catch { Status = "서버 응답 오류"; yield break; }
+                if (!((bool?)j["ok"] ?? false)) { Status = (string)j["msg"] ?? "없는 코드"; yield break; }
                 Session.RequestJoin((string)j["room"], "", inv);
             }
         }
@@ -237,7 +237,7 @@ namespace ADOFAIMulti
         public static void InviteOverlay()
         {
             if (_inviteLobby.HasValue) { try { SteamFriends.OpenGameInviteOverlay(_inviteLobby.Value.Id); } catch { } }
-            else Status = SteamOnline ? "초대 준비 중..." : "Steam 오프라인: 방 코드를 친구에게 알려주세요";
+            else Status = SteamOnline ? "초대 준비 중..." : "Steam 오프라인";
         }
 
         static async void CreateInviteLobby()
@@ -270,11 +270,11 @@ namespace ADOFAIMulti
                 Lobby? l = await SteamMatchmaking.JoinLobbyAsync(lobbyId);
                 MainThread.Post(() =>
                 {
-                    if (!l.HasValue) { Status = "초대받은 방에 들어가지 못했어요"; return; }
+                    if (!l.HasValue) { Status = "초대받은 방 입장 실패"; return; }
                     var code = l.Value.GetData(LobbyKey);
                     var pw = l.Value.GetData(LobbyPwKey);
                     l.Value.Leave();                               // 초대 로비는 코드 전달용일 뿐
-                    if (string.IsNullOrEmpty(code)) { Status = "멀티 모드 방이 아니에요"; return; }
+                    if (string.IsNullOrEmpty(code)) { Status = "멀티 방 아님"; return; }
                     Session.RequestJoin(code, pw);
                 });
             }
@@ -348,7 +348,7 @@ namespace ADOFAIMulti
                 }
                 case "invite":
                     InviteCode = (string)j["code"]; InviteBusy = false;
-                    if (!string.IsNullOrEmpty(InviteCode)) { UnityEngine.GUIUtility.systemCopyBuffer = InviteCode; Session.Notice = "참가 코드 " + InviteCode + " — 복사했어요. 이 코드로 비밀번호 없이 들어와요"; }
+                    if (!string.IsNullOrEmpty(InviteCode)) { UnityEngine.GUIUtility.systemCopyBuffer = InviteCode; Session.Notice = "참가 코드 " + InviteCode + " 복사 완료"; }
                     break;
                 case "error":
                     Status = (string)j["msg"] ?? "접속 실패";
@@ -363,8 +363,8 @@ namespace ADOFAIMulti
         {
             bool was = _welcomed;
             Main.Log("Relay closed: " + error);
-            if (!was) Status = "중계 서버에 연결하지 못했어요" + (string.IsNullOrEmpty(error) ? "" : $" ({error})");
-            else if (string.IsNullOrEmpty(Status) || Status.StartsWith("방")) Status = "연결이 끊겼어요";
+            if (!was) Status = "중계 서버 연결 실패" + (string.IsNullOrEmpty(error) ? "" : $" ({error})");
+            else if (string.IsNullOrEmpty(Status) || Status.StartsWith("방")) Status = "연결 끊김";
             if (Session.InRoom) Session.LeaveRoom(); else Leave();
         }
     }

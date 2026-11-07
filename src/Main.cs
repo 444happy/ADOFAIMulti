@@ -7,7 +7,7 @@ namespace ADOFAIMulti
 {
     public static class Main
     {
-        public const string Version = "0.22.0";
+        public const string Version = "0.23.0";
         public static UnityModManager.ModEntry Mod;
         public static Harmony Harmony;
         public static bool Enabled;
@@ -22,7 +22,7 @@ namespace ADOFAIMulti
             Mod.OnToggle = OnToggle;
             Mod.OnGUI = _ =>
             {
-                GUILayout.Label("메인 섬에 생기는 \"멀티\" 포탈로 이동하면 멀티 섬에 들어갑니다. (v" + Version + ")");
+                GUILayout.Label("ADOFAI Multi (v" + Version + ")");
                 GUILayout.Label("업데이트: " + System.Text.RegularExpressions.Regex.Replace(Updater.StatusText, "<[^>]+>", ""));
             };
             return true;

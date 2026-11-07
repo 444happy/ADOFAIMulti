@@ -111,7 +111,6 @@ namespace ADOFAIMulti
             else if (_drawer) keys.Add(new[] { "Esc", "닫기" });
             else if (inRoom)
             {
-                if (Session.CanReady) keys.Add(new[] { "F5", Session.MyReady ? "준비 취소" : "준비" });
                 keys.Add(new[] { "Esc", "방 나가기" });
             }
             else keys.Add(new[] { "Esc", "메인 메뉴" });

@@ -160,7 +160,7 @@ namespace ADOFAIMulti
                 yield return req.SendWebRequest();
                 if (seq != _searchSeq) yield break;          // 그 사이 새 검색이 시작됨
                 Loading = false;
-                if (req.result != UnityWebRequest.Result.Success) { Error = "TUF에 연결하지 못했어요 (" + req.error + ")"; yield break; }
+                if (req.result != UnityWebRequest.Result.Success) { Error = "TUF 연결 실패 (" + req.error + ")"; yield break; }
                 try
                 {
                     var j = JObject.Parse(req.downloadHandler.text);
@@ -170,7 +170,7 @@ namespace ADOFAIMulti
                     var seen = new HashSet<int>(Results.Select(r => r.Id));
                     foreach (var x in (JArray)j["results"]) { var l = Parse(x); if (seen.Add(l.Id)) Results.Add(l); }
                 }
-                catch (Exception ex) { Error = "TUF 응답을 읽지 못했어요"; Main.Log("TUF parse: " + ex.Message); }
+                catch (Exception ex) { Error = "TUF 응답 오류"; Main.Log("TUF parse: " + ex.Message); }
             }
         }
 

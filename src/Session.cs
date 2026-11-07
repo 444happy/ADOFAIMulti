@@ -24,8 +24,8 @@ namespace ADOFAIMulti
         /// <summary>초대 수락/코드 입력. 레벨 플레이 중이면 메뉴로 나왔을 때 입장</summary>
         public static void RequestJoin(string code, string password = "", string invite = "")
         {
-            if (Game.IsScnGame) { _pendingJoin = code; _pendingPw = password; _pendingInv = invite; Notice = "레벨을 나가면 초대받은 방에 들어갑니다"; return; }
-            if (Updater.UpdateRequired) { Island.Enter(); Notice = "새 버전으로 업데이트한 뒤 들어갈 수 있어요"; return; }
+            if (Game.IsScnGame) { _pendingJoin = code; _pendingPw = password; _pendingInv = invite; Notice = "레벨을 나가면 초대받은 방으로 이동"; return; }
+            if (Updater.UpdateRequired) { Island.Enter(); Notice = "업데이트 필요"; return; }
             if (InRoom) LeaveRoom();
             Island.Enter();
             Net.Join(code, password, invite);
@@ -138,8 +138,8 @@ namespace ADOFAIMulti
 
         public static void OnMemberLeft(ulong id)
         {
-            if (id == Net.HostId && !Net.IsHost) { Notice = "방장이 나갔습니다"; LeaveRoom(); return; }
-            if (Peers.TryGetValue(id, out var left)) { Peers.Remove(id); HostChat(0, "", left.Name + "님이 나갔어요"); }
+            if (id == Net.HostId && !Net.IsHost) { Notice = "방장 퇴장"; LeaveRoom(); return; }
+            if (Peers.TryGetValue(id, out var left)) { Peers.Remove(id); HostChat(0, "", left.Name + " 퇴장"); }
             _chatNext.Remove(id);
         }
 
@@ -155,7 +155,7 @@ namespace ADOFAIMulti
         public static async void HostDistribute(string levelPath)
         {
             if (!Net.IsHost) return;
-            if (!File.Exists(levelPath)) { Notice = ".adofai 파일을 찾을 수 없습니다"; return; }
+            if (!File.Exists(levelPath)) { Notice = ".adofai 파일 없음"; return; }
             Phase = Phase.Packing;
             Notice = "맵 압축 중...";
             try
@@ -207,7 +207,7 @@ namespace ADOFAIMulti
                 var co = Runner.Instance.StartCoroutine(dl.Run(null));
                 while (dl.Running || (!dl.Done && !dl.Failed && !dl.Cancelled)) { HostFetchProgress = dl.Progress; yield return null; if (!InRoom) { dl.Cancelled = true; } }
                 HostFetchProgress = -1;
-                if (!dl.Done) { Phase = Phase.Lobby; Notice = "TUF에서 받지 못했어요: " + dl.Error; yield break; }
+                if (!dl.Done) { Phase = Phase.Lobby; Notice = "TUF 받기 실패: " + dl.Error; yield break; }
                 if (File.Exists(zip)) File.Delete(zip);
                 File.Move(zip + ".part", zip);
             }
@@ -223,7 +223,7 @@ namespace ADOFAIMulti
                 catch (Exception ex) { err = ex; }
             });
             while (!t.IsCompleted) yield return null;
-            if (err != null || rel == null) { Phase = Phase.Lobby; Notice = rel == null && err == null ? "zip 안에 .adofai 파일이 없어요" : "압축을 풀지 못했어요: " + err?.Message; yield break; }
+            if (err != null || rel == null) { Phase = Phase.Lobby; Notice = rel == null && err == null ? "zip 안에 .adofai 파일 없음" : "압축 해제 실패: " + err?.Message; yield break; }
             if (!InRoom || !Net.IsHost) yield break;
 
             MapHash = hash; MapRel = rel; MapTitle = lv.Song; MapSize = new FileInfo(zip).Length;
@@ -373,7 +373,7 @@ namespace ADOFAIMulti
                 else if (!d.Cancelled)
                 {
                     Main.Log("TUF download failed, falling back to host: " + d.Error);
-                    Notice = "TUF에서 받지 못해서 방장에게서 받는 중...";
+                    Notice = "TUF 받기 실패 · 방장에게서 받는 중...";
                     StartDownload();
                 }
             }));
@@ -407,7 +407,7 @@ namespace ADOFAIMulti
             MainThread.Post(() =>
             {
                 if (hash != MapHash) return;
-                if (!ok) { Notice = "맵 파일이 손상됐습니다. 다시 받아주세요"; DlCancelled = true; Net.SendToHost(Packet.Build(Msg.MapCancel)); return; }
+                if (!ok) { Notice = "맵 파일 손상"; DlCancelled = true; Net.SendToHost(Packet.Build(Msg.MapCancel)); return; }
                 if (!MapPack.Has(hash, MapRel)) { var rel = MapPack.FindLevelFile(MapPack.MapDir(hash)); if (rel != null) MapRel = rel; }
                 Notice = "맵 준비 완료";
                 Net.SendToHost(Packet.Build(Msg.MapHave, w => w.Write(hash)));
@@ -460,9 +460,6 @@ namespace ADOFAIMulti
                         GameReady = true;
                         Net.SendToHost(Packet.Build(Msg.Ready, w => w.Write(true)));
                     }
-                    break;
-                case Phase.Distributing:
-                    if (Input.GetKeyDown(KeyCode.F5)) ToggleReady();
                     break;
                 case Phase.Countdown:
                     Game.KeepNoFail();
@@ -524,16 +521,16 @@ namespace ADOFAIMulti
                     var name = r.ReadString(); var ver = r.ReadString();
                     if (ver != Main.Version)
                     {
-                        string tip = Updater.IsNewer(Main.Version, ver) ? "게임을 재시작하면 자동으로 업데이트돼요." : "방장이 게임을 재시작해서 업데이트해야 해요.";
-                        Net.Send(from, Packet.Build(Msg.Reject, w => w.Write($"버전이 달라요 (방장 v{Main.Version} / 나 v{ver}). {tip}")));
+                        string tip = Updater.IsNewer(Main.Version, ver) ? "재시작하면 자동 업데이트" : "방장 업데이트 필요";
+                        Net.Send(from, Packet.Build(Msg.Reject, w => w.Write($"버전 다름 (방장 v{Main.Version} / 나 v{ver}) · {tip}")));
                         return;
                     }
-                    if (Phase >= Phase.Loading) { Net.Send(from, Packet.Build(Msg.Reject, w => w.Write("게임이 진행 중입니다. 끝나고 다시 들어와 주세요"))); return; }
+                    if (Phase >= Phase.Loading) { Net.Send(from, Packet.Build(Msg.Reject, w => w.Write("게임 진행 중"))); return; }
                     Peers[from] = new Entry { Id = from, Name = name, State = PState.Lobby };
                     Net.Send(from, Packet.Build(Msg.Welcome));
                     Net.Send(from, Packet.Build(Msg.Settings, w => w.Write(Judge)));
                     if (MapHash != null) Net.Send(from, OfferPacket());
-                    HostChat(0, "", name + "님이 들어왔어요");
+                    HostChat(0, "", name + " 입장");
                     break;
                 }
                 case Msg.Chat:
@@ -603,7 +600,7 @@ namespace ADOFAIMulti
                     if (Net.IsHost) break;
                     Phase = Phase.Distributing;
                     DlCancelled = false;
-                    if (MapPack.Has(MapHash, MapRel)) { Notice = "이미 받은 맵입니다"; Net.SendToHost(Packet.Build(Msg.MapHave, w => w.Write(MapHash))); }
+                    if (MapPack.Has(MapHash, MapRel)) { Notice = "이미 받은 맵"; Net.SendToHost(Packet.Build(Msg.MapHave, w => w.Write(MapHash))); }
                     else if (MapSource == 1 && !string.IsNullOrEmpty(MapDlUrl)) { Notice = $"TUF에서 받는 중: {MapTitle}"; StartTufDownload(); }
                     else { Notice = $"맵 받는 중: {MapTitle}"; StartDownload(); }
                     break;
@@ -636,11 +633,15 @@ namespace ADOFAIMulti
                     Board = Packet.ReadEntries(r);
                     break;
                 case Msg.Results:
+                    // 모두 끝나면: 레벨에서 나와 로비로 돌아가고, 로비 위에 랭킹 창을 띄움
                     Results = Packet.ReadEntries(r);
-                    Phase = Phase.Results;
-                    Notice = "결과 발표!";
+                    MyReady = false; GameReady = false; _resultsSent = false;
                     Game.RestoreSettings();
+                    Phase = Phase.Lobby;
                     UI.ShowResults = true;
+                    if (Game.IsScnGame) Island.ReturnFromLevel();
+                    else if (!Island.InIsland) Island.Enter();
+                    if (Net.IsHost) foreach (var e in Peers.Values) { if (e.State != PState.Cancelled) e.State = PState.HasMap; e.LobbyReady = false; e.Stats = new Stats(); }
                     break;
                 case Msg.BackToLobby:
                     ResetMatch();
@@ -649,7 +650,7 @@ namespace ADOFAIMulti
                     if (Game.IsScnGame) Island.ReturnFromLevel();
                     else if (!Island.InIsland) Island.Enter();
                     if (Net.IsHost) foreach (var e in Peers.Values) { e.State = PState.Lobby; e.LobbyReady = false; e.Stats = new Stats(); }
-                    Notice = "로비로 돌아왔습니다";
+                    Notice = "로비로 복귀";
                     break;
             }
         }

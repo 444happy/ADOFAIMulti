@@ -52,7 +52,7 @@ namespace ADOFAIMulti
         {
             error = null;
             var ctrl = ADOBase.controller;
-            if (ctrl == null) { error = "메인 메뉴나 커스텀 레벨 화면에서 다시 시도해 주세요"; return false; }
+            if (ctrl == null) { error = "메인 메뉴나 커스텀 레벨 화면에서 다시 시도"; return false; }
             if (_savedNoFail == null) _savedNoFail = GCS.useNoFail;
             if (_savedDiff == null) _savedDiff = GCS.difficulty;
             GCS.difficulty = (Difficulty)Session.Judge;

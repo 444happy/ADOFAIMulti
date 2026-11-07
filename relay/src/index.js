@@ -117,17 +117,17 @@ export class Room {
     const list = this.members();
     const hostMember = list.find((a) => a.host);
     if (!/^\d{1,20}$/.test(id) || id === "0") return reject("bad_id", "잘못된 접속 정보예요");
-    if (host && hostMember) return reject("taken", "이미 쓰이는 방 코드예요. 다시 만들어 주세요");
-    if (!host && !hostMember) return reject("no_room", "방을 찾을 수 없어요. 코드를 확인해 주세요");
-    if (list.length >= MAX_MEMBERS) return reject("full", "방이 꽉 찼어요 (최대 8명)");
+    if (host && hostMember) return reject("taken", "이미 쓰이는 방 코드");
+    if (!host && !hostMember) return reject("no_room", "방 없음");
+    if (list.length >= MAX_MEMBERS) return reject("full", "방 꽉 참 (최대 8명)");
     if (!host) {
       const meta = (await this.state.storage.get("meta")) || {};
       const inv = (url.searchParams.get("inv") || "").toUpperCase();
       const viaInvite = inv && meta.invite && inv === meta.invite;
       if (meta.pwHash && !viaInvite && (await pwHash(code, url.searchParams.get("pw") || "")) !== meta.pwHash)
-        return reject("bad_pw", url.searchParams.get("pw") ? "비밀번호가 틀렸어요" : "비밀번호가 필요한 방이에요");
+        return reject("bad_pw", url.searchParams.get("pw") ? "비밀번호 틀림" : "비밀번호 필요");
     }
-    if (list.some((a) => a.id === id)) return reject("dup", "이미 이 방에 접속해 있어요");
+    if (list.some((a) => a.id === id)) return reject("dup", "이미 접속 중");
 
     if (host) {
       // 새 방: 공개 여부/이름은 접속 주소로 받고, 이후 방장이 meta 메시지로 바꿀 수 있음
@@ -246,7 +246,7 @@ export class Lobby {
     }
     if (url.pathname === "/invget") {
       const v = await this.state.storage.get("inv:" + (url.searchParams.get("c") || ""));
-      if (!v || Date.now() - v.updated > 24 * 3600_000) return json({ ok: false, msg: "없는 코드예요. 방장에게 코드를 다시 받아주세요" });
+      if (!v || Date.now() - v.updated > 24 * 3600_000) return json({ ok: false, msg: "없는 코드" });
       return json({ ok: true, room: v.room, inv: url.searchParams.get("c") });
     }
     if (req.method === "POST" && url.pathname === "/invset") {

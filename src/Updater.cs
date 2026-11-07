@@ -41,7 +41,7 @@ namespace ADOFAIMulti
                     case State.Checking: return "업데이트 확인 중...";
                     case State.UpToDate: return "최신 버전";
                     case State.Downloading: return $"v{Latest} 받는 중...";
-                    case State.ReadyToRestart: return $"<color=#7CFC00>v{Latest} 설치 완료 — 게임을 재시작하면 적용돼요</color>";
+                    case State.ReadyToRestart: return $"<color=#7CFC00>v{Latest} 설치 완료 · 재시작하면 적용</color>";
                     case State.Failed: return "<color=#ff8a7a>업데이트 확인 실패</color>";
                 }
                 return "";
@@ -130,7 +130,7 @@ namespace ADOFAIMulti
             using (var h = SHA256.Create())
             {
                 var got = BitConverter.ToString(h.ComputeHash(dll)).Replace("-", "").ToLowerInvariant();
-                if (!string.IsNullOrEmpty(sha) && got != sha) { Fail("파일 검증 실패 (GitHub 캐시가 아직 갱신 전일 수 있어요. 잠시 뒤 다시 확인)"); yield break; }
+                if (!string.IsNullOrEmpty(sha) && got != sha) { Fail("파일 검증 실패"); yield break; }
             }
 
             try

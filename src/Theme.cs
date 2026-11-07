@@ -52,10 +52,10 @@ namespace ADOFAIMulti
         public static readonly Theme Mono = FromBase("mono", "모노", H("0d0d0f"), H("1b1b20"), H("f4f4f6"), H("f2f2f2"), H("b8b8c2"));
         public static readonly Theme Custom = FromBase("custom", "커스텀", H("101418"), H("1c222a"), H("eceff4"), H("6aa8ff"), H("c58bff"));
 
-        public static readonly Theme[] All = { Slate, Mono, FireIce, Custom };
+        public static readonly Theme[] All = { FireIce, Mono, Custom };
 
-        /// <summary>기본값: 기본 (설계판 배치와 같은 색)</summary>
-        public static Theme Current = Slate;
+        /// <summary>처음 값: 불과 얼음 ("기본" 테마는 목록에서 뺐고, 예전에 기본을 골랐던 사람도 불과 얼음으로)</summary>
+        public static Theme Current = FireIce;
         /// <summary>커스텀 색이 바뀔 때마다 증가 → UI가 스타일을 다시 만든다</summary>
         public static int Version;
 

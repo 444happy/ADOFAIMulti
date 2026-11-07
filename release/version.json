@@ -1,7 +1,7 @@
 {
-  "Version": "0.22.0",
+  "Version": "0.23.0",
   "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
   "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
-  "Sha256": "24972187701854dbd12120b49f0f0c7026515ef1d19f36d11723f0db7d16bb5e",
-  "Notes": "레벨 안에서 아무 키로 준비, 순위를 절대 정확도로, 게임 시작 버튼 상시·주황색, 한 판 더 삭제"
+  "Sha256": "bee8249eae1eef18f34b700fb106f0d7f9b0c66951c48a1b68fca5113dd597f1",
+  "Notes": "완주 후 대기, 모두 끝나면 랭킹 창 (절대 정확도 · 세부 판정), 문구 정리"
 }
