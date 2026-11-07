@@ -14,6 +14,7 @@ namespace ADOFAIMulti
         {
             public string Code, Name, Host, Phase, Song, Artist, Ver;
             public int Count, Max;
+            public bool Locked;
             public bool Full => Count >= Max;
             public bool InGame => Phase == "playing" || Phase == "results";
             public bool SameVersion => Ver == Main.Version;
@@ -57,6 +58,7 @@ namespace ADOFAIMulti
                             Code = (string)x["code"] ?? "", Name = (string)x["name"] ?? "", Host = (string)x["host"] ?? "",
                             Phase = (string)x["phase"] ?? "lobby", Song = (string)x["song"] ?? "", Artist = (string)x["artist"] ?? "",
                             Ver = (string)x["ver"] ?? "", Count = (int?)x["count"] ?? 0, Max = (int?)x["max"] ?? 8,
+                            Locked = (bool?)x["locked"] ?? false,
                         });
                     // 들어갈 수 있는 방 먼저: 같은 버전 → 대기 중 → 자리 있음
                     Rooms.Sort((a, b) =>

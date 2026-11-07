@@ -131,22 +131,29 @@ namespace ADOFAIMulti
         // 방 설정 (방장)
         public static bool RoomPublic;
         public static string RoomName = "";
+        public static string RoomPw = "";            // 방장: 비공개 방 비밀번호
+        static string _joinPw = "";
+        public const string LobbyPwKey = "adofaimultipw";
         static string _lastMeta;
 
-        public static void CreateRoom(bool isPublic, string roomName)
+        public static void CreateRoom(bool isPublic, string roomName, string password = "")
         {
             if (_relay != null) return;
             RoomPublic = isPublic;
+            RoomPw = isPublic ? "" : (password ?? "").Trim();
             RoomName = (roomName ?? "").Trim();
             Connect(NewCode(), true);
         }
 
         /// <summary>방장: 공개 여부 바꾸기 (서버의 공개 방 목록에 바로 반영)</summary>
-        public static void SetPublic(bool isPublic)
+        public static void SetPublic(bool isPublic, string password = null)
         {
             if (!IsHost) return;
             RoomPublic = isPublic;
+            RoomPw = isPublic ? "" : (password ?? RoomPw ?? "").Trim();
             _lastMeta = null;
+            _relay?.SendText("{\"t\":\"meta\",\"public\":" + (isPublic ? "true" : "false") + ",\"pw\":" + Js(RoomPw) + "}");
+            if (_inviteLobby.HasValue) { try { _inviteLobby.Value.SetData(LobbyPwKey, RoomPw); } catch { } }
         }
 
         static string Js(string s) => "\"" + (s ?? "").Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", " ").Replace("\r", " ").Replace("\t", " ") + "\"";
@@ -162,8 +169,9 @@ namespace ADOFAIMulti
             _relay.SendText(meta);
         }
 
-        public static void Join(string code)
+        public static void Join(string code, string password = "")
         {
+            _joinPw = (password ?? "").Trim();
             if (_relay != null) Leave();
             Connect(NormalizeCode(code), false);
         }
@@ -174,7 +182,8 @@ namespace ADOFAIMulti
             RoomCode = code;
             Status = host ? "방 만드는 중..." : $"방 {code} 에 들어가는 중...";
             string url = $"{RelayUrl}/room/{code}?id={MyId}&host={(host ? 1 : 0)}&v={Uri.EscapeDataString(Main.Version)}&name={Uri.EscapeDataString(MyName)}";
-            if (host) url += $"&pub={(RoomPublic ? 1 : 0)}&rname={Uri.EscapeDataString(RoomName ?? "")}";
+            if (host) url += $"&pub={(RoomPublic ? 1 : 0)}&rname={Uri.EscapeDataString(RoomName ?? "")}&pw={Uri.EscapeDataString(RoomPw ?? "")}";
+            else if (!string.IsNullOrEmpty(_joinPw)) url += "&pw=" + Uri.EscapeDataString(_joinPw);
             Main.Log($"Relay connect {(host ? "host" : "join")} {code}");
             _relay = new RelayClient();
             _relay.Connect(url);
@@ -207,6 +216,7 @@ namespace ADOFAIMulti
                     var lobby = l.Value;
                     lobby.SetFriendsOnly(); lobby.SetJoinable(true);
                     lobby.SetData(LobbyKey, RoomCode);
+                    lobby.SetData(LobbyPwKey, RoomPw ?? "");
                     _inviteLobby = lobby;
                     Main.Log("Invite lobby ready " + lobby.Id.Value);
                 });
@@ -225,9 +235,10 @@ namespace ADOFAIMulti
                 {
                     if (!l.HasValue) { Status = "초대받은 방에 들어가지 못했어요"; return; }
                     var code = l.Value.GetData(LobbyKey);
+                    var pw = l.Value.GetData(LobbyPwKey);
                     l.Value.Leave();                               // 초대 로비는 코드 전달용일 뿐
                     if (string.IsNullOrEmpty(code)) { Status = "멀티 모드 방이 아니에요"; return; }
-                    Session.RequestJoin(code);
+                    Session.RequestJoin(code, pw);
                 });
             }
             catch (Exception ex) { Main.Log("JoinViaSteamLobby: " + ex.Message); }
@@ -301,6 +312,7 @@ namespace ADOFAIMulti
                 case "error":
                     Status = (string)j["msg"] ?? "접속 실패";
                     Main.Log("Relay error: " + (string)j["code"]);
+                    if ((string)j["code"] == "bad_pw") UI.AskPassword(RoomCode, Status);
                     if (Session.InRoom) Session.LeaveRoom(); else Leave();
                     break;
             }

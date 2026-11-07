@@ -209,6 +209,48 @@ namespace ADOFAIMulti
         }
 
         static bool _drawer, _settings, _confirmLeave, _profile;
+        // 비밀번호 창: 0 없음, 1 비공개 방 들어가기, 2 (방장) 비공개로 바꾸며 비밀번호 정하기
+        static int _pwMode; static string _pwCode = "", _pwEdit = "", _pwMsg = "", _roomPw = "";
+        public static void AskPassword(string code, string msg) { _pwMode = 1; _pwCode = code ?? ""; _pwEdit = ""; _pwMsg = msg ?? ""; }
+        static void AskSetPassword() { _pwMode = 2; _pwEdit = Net.RoomPw ?? ""; _pwMsg = ""; }
+        static void TryCreateRoom()
+        {
+            if (!_newPublic && string.IsNullOrWhiteSpace(_roomPw)) { Session.Notice = "비공개 방은 비밀번호를 정해야 해요"; Net.Status = Session.Notice; return; }
+            Net.CreateRoom(_newPublic, _roomName, _roomPw);
+        }
+        static void JoinRoom(RoomList.Room rm)
+        {
+            if (rm.Locked) AskPassword(rm.Code, "");
+            else Net.Join(rm.Code);
+        }
+
+        static void DrawPasswordPrompt()
+        {
+            float W = Screen.width, H = Screen.height;
+            GUI.DrawTexture(new Rect(0, 0, W, H), T_dim);
+            var r = new Rect((W - 460) / 2f, (H - 250) / 2f, 460, 250);
+            GUILayout.BeginArea(r, S_card);
+            GUILayout.Label(_pwMode == 2 ? "비공개 방 비밀번호" : "비밀번호가 걸린 방", Label(22, C_txt, FontStyle.Bold));
+            GUILayout.Label(_pwMode == 2 ? "친구에게 알려줄 비밀번호를 정해주세요." : (_pwMsg.Length > 0 ? Esc(_pwMsg) : "방장에게 받은 비밀번호를 입력하세요."), _pwMsg.Length > 0 && _pwMode == 1 ? Label(14, C_fire) : S_para);
+            GUILayout.Space(6);
+            GUI.SetNextControlName("pwField");
+            _pwEdit = GUILayout.PasswordField(_pwEdit ?? "", '*', 32, S_field);
+            if (Event.current.type == EventType.Repaint && GUI.GetNameOfFocusedControl() != "pwField") GUI.FocusControl("pwField");
+            bool enter = Event.current.type == EventType.KeyDown && (Event.current.keyCode == KeyCode.Return || Event.current.keyCode == KeyCode.KeypadEnter);
+            GUILayout.FlexibleSpace();
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("취소", S_btn)) _pwMode = 0;
+            GUI.enabled = !string.IsNullOrWhiteSpace(_pwEdit);
+            if (GUILayout.Button(_pwMode == 2 ? "비공개로 바꾸기" : "들어가기", S_btnAcc) || (enter && GUI.enabled))
+            {
+                if (_pwMode == 2) { Net.SetPublic(false, _pwEdit); Session.Notice = "비공개 방이 됐어요 — 비밀번호를 알아야 들어와요"; }
+                else Net.Join(_pwCode, _pwEdit);
+                _pwMode = 0;
+            }
+            GUI.enabled = true;
+            GUILayout.EndHorizontal();
+            GUILayout.EndArea();
+        }
         static string _nickEdit = "";
         static string _joinId = "", _mapPath = "", _search = "";
         static Vector2 _sMaps, _sRes;
@@ -286,7 +328,8 @@ namespace ADOFAIMulti
             var e = Event.current;
             if (e.type == EventType.KeyDown && e.keyCode == KeyCode.Escape && !Island.Busy)
             {
-                if (_confirmLeave) _confirmLeave = false;
+                if (_pwMode != 0) _pwMode = 0;
+                else if (_confirmLeave) _confirmLeave = false;
                 else if (_settings) _settings = false;
                 else if (_profile) _profile = false;
                 else if (_drawer) _drawer = false;
@@ -301,6 +344,7 @@ namespace ADOFAIMulti
                 if (_settings) DrawSettings(W, H);
                 if (_profile) DrawProfile(W, H);
                 if (_confirmLeave) DrawConfirm();
+                if (_pwMode != 0) DrawPasswordPrompt();
                 return;
             }
             DrawBackdrop(W, H);
@@ -322,6 +366,7 @@ namespace ADOFAIMulti
             if (_settings) DrawSettings(W, H);
             if (_profile) DrawProfile(W, H);
             if (_confirmLeave) DrawConfirm();
+            if (_pwMode != 0) DrawPasswordPrompt();
         }
 
         static void DrawBackdrop(float W, float H)
@@ -375,7 +420,7 @@ namespace ADOFAIMulti
                 {
                     x -= 104;
                     if (GUI.Button(new Rect(x, 24, 96, 36), Net.RoomPublic ? "공개" : "비공개", Net.RoomPublic ? S_rowOn : S_iconBtn))
-                    { Net.SetPublic(!Net.RoomPublic); Session.Notice = Net.RoomPublic ? "공개 방이 됐어요 — 목록에 표시돼요" : "비공개 방이 됐어요 — 코드로만 들어와요"; }
+                    { if (Net.RoomPublic) AskSetPassword(); else { Net.SetPublic(true); Session.Notice = "공개 방이 됐어요"; } }
                 }
                 if (!string.IsNullOrEmpty(Net.RoomCode))
                 {
@@ -486,8 +531,14 @@ namespace ADOFAIMulti
             if (GUILayout.Button("공개", _newPublic ? S_rowOn : S_row, GUILayout.Height(40), GUILayout.Width(84))) _newPublic = true;
             if (GUILayout.Button("비공개", !_newPublic ? S_rowOn : S_row, GUILayout.Height(40), GUILayout.Width(96))) _newPublic = false;
             GUILayout.Space(6);
-            if (GUILayout.Button("방 만들기", S_cta40, GUILayout.ExpandWidth(true))) Net.CreateRoom(_newPublic, _roomName);
+            if (GUILayout.Button("방 만들기", S_cta40, GUILayout.ExpandWidth(true))) TryCreateRoom();
             GUILayout.EndHorizontal();
+            if (!_newPublic)
+            {
+                GUILayout.Space(6);
+                _roomPw = GUILayout.PasswordField(_roomPw ?? "", '*', 32, S_field);
+                if (string.IsNullOrEmpty(_roomPw) && Event.current.type == EventType.Repaint) { var lr = GUILayoutUtility.GetLastRect(); GUI.Label(new Rect(lr.x + 16, lr.y, lr.width, lr.height), "비밀번호", Label(15, A(C_sub, 0.6f))); }
+            }
             GUILayout.EndVertical();
 
             GUILayout.Space(8);
@@ -517,7 +568,7 @@ namespace ADOFAIMulti
             var r = GUILayoutUtility.GetRect(100, 86, GUILayout.ExpandWidth(true));
             r = new Rect(r.x, r.y, r.width - 4, r.height - 8);
             bool canJoin = rm.SameVersion && !rm.Full && !rm.InGame;
-            if (GUI.Button(r, "", canJoin ? S_cardBtn : S_card) && canJoin) Net.Join(rm.Code);
+            if (GUI.Button(r, "", canJoin ? S_cardBtn : S_card) && canJoin) JoinRoom(rm);
 
             // 왼쪽: 인원 원형
             var cr = new Rect(r.x + 18, r.y + (r.height - 50) / 2f, 50, 50);
@@ -534,8 +585,8 @@ namespace ADOFAIMulti
             if (!rm.SameVersion) { st = "버전 다름 v" + Trim(rm.Ver, 10); sc = C_sub; }
             else if (rm.Full) { st = "가득 참"; sc = C_sub; }
             else if (rm.InGame) { st = rm.Phase == "results" ? "결과 보는 중" : "게임 중"; sc = C_gold; }
-            else if (rm.Phase == "distributing") { st = "맵 받는 중 · 입장"; sc = C_acc; }
-            else { st = "입장"; sc = C_acc; }
+            else if (rm.Phase == "distributing") { st = rm.Locked ? "비밀번호 · 맵 받는 중" : "맵 받는 중 · 입장"; sc = rm.Locked ? C_gold : C_acc; }
+            else { st = rm.Locked ? "비밀번호 · 입장" : "입장"; sc = rm.Locked ? C_gold : C_acc; }
             float w = 22 + Label(12, sc, FontStyle.Bold).CalcSize(new GUIContent(st)).x;
             Pill(new Rect(r.xMax - w - 18, r.y + (r.height - 26) / 2f, w, 26), Esc(st), sc);
         }

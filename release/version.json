@@ -1,7 +1,7 @@
 {
-  "Version": "0.15.0",
+  "Version": "0.16.0",
   "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
   "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
-  "Sha256": "d17d0c0cb6f90a7bab9affcc4515be1ca9007aa70063ac5cc7ab4217da37c906",
-  "Notes": "모두 준비 → 방장이 시작 (자동 시작 제거)"
+  "Sha256": "05ece86f1f11dbadcee3a249d83c8ed0bc40eb1488c0cfa80fe9f0d7ab224132",
+  "Notes": "비공개 방은 비밀번호로 입장 (목록에 비밀번호 표시)"
 }

@@ -42,6 +42,12 @@ export default {
   },
 };
 
+async function pwHash(code, pw) {
+  if (!pw) return "";
+  const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(code + ":" + pw));
+  return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 // ===================================================================== Room
 export class Room {
   constructor(state, env) {
@@ -66,8 +72,10 @@ export class Room {
     const list = this.members();
     const host = list.find((a) => a.host);
     if (!host) { await this.unpublish(); return; }
-    if (!meta.public) { await this.unpublish(); return; }
+    // 공개 방, 또는 비밀번호가 걸린 방(자물쇠 표시)을 목록에 올림
+    if (!meta.public && !meta.pwHash) { await this.unpublish(); return; }
     const entry = {
+      locked: !!meta.pwHash,
       code: meta.code, name: (meta.name || `${host.name}의 방`).slice(0, 40), host: host.name,
       count: list.length, max: MAX_MEMBERS, phase: meta.phase || "lobby",
       song: (meta.song || "").slice(0, 60), artist: (meta.artist || "").slice(0, 40), ver: host.ver || "",
@@ -105,12 +113,18 @@ export class Room {
     if (host && hostMember) return reject("taken", "이미 쓰이는 방 코드예요. 다시 만들어 주세요");
     if (!host && !hostMember) return reject("no_room", "방을 찾을 수 없어요. 코드를 확인해 주세요");
     if (list.length >= MAX_MEMBERS) return reject("full", "방이 꽉 찼어요 (최대 8명)");
+    if (!host) {
+      const meta = (await this.state.storage.get("meta")) || {};
+      if (meta.pwHash && (await pwHash(code, url.searchParams.get("pw") || "")) !== meta.pwHash)
+        return reject("bad_pw", url.searchParams.get("pw") ? "비밀번호가 틀렸어요" : "비밀번호가 필요한 방이에요");
+    }
     if (list.some((a) => a.id === id)) return reject("dup", "이미 이 방에 접속해 있어요");
 
     if (host) {
       // 새 방: 공개 여부/이름은 접속 주소로 받고, 이후 방장이 meta 메시지로 바꿀 수 있음
       await this.state.storage.put("meta", {
         code, public: url.searchParams.get("pub") === "1",
+        pwHash: await pwHash(code, (url.searchParams.get("pw") || "").slice(0, 32)),
         name: (url.searchParams.get("rname") || "").slice(0, 40), phase: "lobby", song: "", artist: "",
       });
     }
@@ -141,6 +155,7 @@ export class Room {
       if (j.t === "meta") {
         const meta = (await this.state.storage.get("meta")) || {};
         for (const k of ["public", "name", "phase", "song", "artist"]) if (k in j) meta[k] = j[k];
+        if ("pw" in j) meta.pwHash = await pwHash(meta.code, String(j.pw || "").slice(0, 32));
         await this.state.storage.put("meta", meta);
         await this.publish();
       }

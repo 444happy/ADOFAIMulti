@@ -123,7 +123,7 @@ namespace ADOFAIMulti
         }
 
         static readonly Dictionary<string, GUIStyle> _lField = new Dictionary<string, GUIStyle>();
-        static string LInput(Layout.El e, Rect r, string value, string placeholder, int max = 40)
+        static string LInput(Layout.El e, Rect r, string value, string placeholder, int max = 40, bool password = false)
         {
             LBox(r, e.Fill, e.Stroke, e.Radius);
             string key = LS(e.Size) + "|" + e.Weight;
@@ -135,7 +135,7 @@ namespace ADOFAIMulti
                 _lField[key] = st;
             }
             var o = GUI.enabled; GUI.enabled = !_lBlocked && o;
-            value = GUI.TextField(r, value ?? "", max, st);
+            value = password ? GUI.PasswordField(r, value ?? "", '*', max, st) : GUI.TextField(r, value ?? "", max, st);
             GUI.enabled = o;
             if (string.IsNullOrEmpty(value) && Event.current.type == EventType.Repaint)
                 GUI.Label(new Rect(r.x + LS(14), r.y, r.width - LS(28), r.height), placeholder, Label(LS(e.Size), A(e.Color, 0.9f), FontStyle.Normal, TextAnchor.MiddleLeft));
@@ -218,12 +218,15 @@ namespace ADOFAIMulti
                     bool can = !inRoom || host;
                     LToggle(e, r, wantPrivate ? !pub : pub, () =>
                     {
-                        if (inRoom) { Net.SetPublic(!wantPrivate); Session.Notice = !wantPrivate ? "공개 방이 됐어요" : "비공개 방이 됐어요"; }
+                        if (inRoom) { if (wantPrivate) AskSetPassword(); else { Net.SetPublic(true); Session.Notice = "공개 방이 됐어요"; } }
                         else _newPublic = !wantPrivate;
                     }, can);
                     return;
                 }
-                case "방 만들기": LButton(e, r, !inRoom, () => Net.CreateRoom(_newPublic, _roomName)); return;
+                case "방 만들기": LButton(e, r, !inRoom, TryCreateRoom); return;
+                case "비밀번호 입력":
+                    if (inRoom || _newPublic) return;                // 비공개를 골랐을 때만 보임
+                    _roomPw = LInput(e, r, _roomPw, Tok(e.Text), 32, true); return;
                 case "방 코드로 참가":
                     if (e.Type == "input") _joinId = Net.NormalizeCode(LInput(e, r, _joinId, Tok(e.Text), 8));
                     else LButton(e, r, Net.IsValidCode(_joinId), () => Net.Join(_joinId));
@@ -390,7 +393,7 @@ namespace ADOFAIMulti
 
             bool results = inRoom && ShowResults && Session.Results.Count > 0 && Layout.Get("s_results") != null;
             bool drawer = _drawer && Layout.Get("s_maps") != null;
-            bool popup = _settings || _profile || _confirmLeave;
+            bool popup = _settings || _profile || _confirmLeave || _pwMode != 0;
 
             _lBlocked = results || drawer || popup;
             DrawLayout(main, true);
