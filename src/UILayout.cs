@@ -345,6 +345,28 @@ namespace ADOFAIMulti
                     LButton(e, r, !Net.InviteBusy, InviteClick,
                         string.IsNullOrEmpty(Net.InviteCode) ? (Net.InviteBusy ? "{i:refresh} 만드는 중..." : "{i:plus} 참가 코드 만들기") : "{i:copy} 코드  " + Net.InviteCode);
                     return;
+                case "판정 바꾸기":
+                {
+                    // 지금 판정 아이콘 하나. 누를 때마다 보통 → 엄격 → 느슨 → 보통
+                    int j = Session.Judge;
+                    var oc = GUI.color;
+                    bool hov = host && !_lBlocked && r.Contains(Event.current.mousePosition);
+                    LBox(r, hov ? Hex("262d38") : Hex("1f242c"), hov ? C_acc : Hex("323a46"), e.Radius);
+                    float s = Mathf.Min(r.width, r.height) * 0.7f;
+                    JudgeIcon(new Rect(r.center.x - s / 2f, r.center.y - s / 2f, s, s), j);
+                    GUI.color = oc;
+                    if (hov)
+                    {
+                        string tip = Session.JudgeNames[j] + "  ·  눌러서 바꾸기";
+                        var ts = Label(LS(13), C_txt, FontStyle.Bold, TextAnchor.MiddleCenter);
+                        float tw = ts.CalcSize(new GUIContent(tip)).x + LS(20);
+                        var tr = new Rect(r.center.x - tw / 2f, r.y - LS(32), tw, LS(26));
+                        LBox(tr, Hex("0d0f12"), Hex("3a4452"), 8);
+                        GUI.Label(tr, tip, ts);
+                    }
+                    if (LClick(r, host, e.Radius)) Session.HostSetJudge(j == 1 ? 2 : j == 2 ? 0 : 1);
+                    return;
+                }
                 case "판정 설정":
                 {
                     // 글자 대신 얼불춤 판정 아이콘 (글자는 어느 판정인지 고르는 데만 씀)
@@ -373,7 +395,7 @@ namespace ADOFAIMulti
                 case "플레이어 명단": LBox(r, e.Fill, e.Stroke, e.Radius); { var o = GUI.enabled; GUI.enabled = !_lBlocked && o; DrawLineup(r, false); GUI.enabled = o; } return;
                 case "맵 고르기 열기": case "맵 선택 열기":
                     // 메인 버튼이 이미 "맵 선택"이면 겹치지 않게 숨김
-                    if (host && !(_layoutMainBtn && Session.Phase == Phase.Lobby && Session.MapHash == null))
+                    if (host)
                         LButton(e, r, !busy, () => { _drawer = true; _drawerTab = 1; }, Session.MapHash != null && !string.IsNullOrEmpty(e.Text) && e.Text.Contains("맵 선택") ? e.Text.Replace("맵 선택", "다른 맵 선택") : null);
                     return;
                 case "한 판 더":
@@ -682,7 +704,7 @@ namespace ADOFAIMulti
                         }
                         break;
                     case Phase.Results:
-                        icon = "trophy"; ic = C_gold; title = "결과 기다리는 중"; desc = "아직 플레이 중인 사람이 있어요. 오른쪽 아래에서 지금 바로 발표할 수 있어요.";
+                        icon = "trophy"; ic = C_gold; title = "결과 기다리는 중"; desc = "아직 플레이 중인 사람이 있어요. 아래 버튼으로 지금 바로 발표할 수 있어요.";
                         break;
                     default: icon = "play"; ic = C_ice; title = "게임 진행 중"; desc = "레벨에 들어가는 중이에요..."; break;
                 }
@@ -704,7 +726,7 @@ namespace ADOFAIMulti
                     }
                     case Phase.Distributing:
                         if (Session.MyReady) { icon = "check"; ic = C_ok; title = "준비 완료!"; desc = "방장이 시작을 누르면 바로 카운트다운이 시작돼요."; }
-                        else if (Session.MyHasMap) { icon = "check"; ic = C_gold; title = "맵 받기 완료 — 준비를 눌러주세요"; desc = "F5 또는 오른쪽 아래 준비 버튼. 모두 준비하면 방장이 시작해요."; }
+                        else if (Session.MyHasMap) { icon = "check"; ic = C_gold; title = "맵 받기 완료 — 준비를 눌러주세요"; desc = "F5 또는 아래 준비 버튼. 모두 준비하면 방장이 시작해요."; }
                         else { title = "맵 확인 중"; desc = "받은 맵을 확인하고 있어요."; }
                         break;
                     case Phase.Results: icon = "trophy"; ic = C_gold; title = "결과 기다리는 중"; desc = "다른 사람이 끝나길 기다리는 중이에요."; break;

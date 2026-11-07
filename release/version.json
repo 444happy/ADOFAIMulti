@@ -1,7 +1,7 @@
 {
-  "Version": "0.19.0",
+  "Version": "0.20.0",
   "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
   "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
-  "Sha256": "87478944eb56653c0a6ba4ffb78cc347184f0455f77b2ecb6ada72e99ab325c8",
-  "Notes": "기권 삭제, 판정을 얼불춤 판정 아이콘으로, 진행 단계 글자·진행 가이드 삭제, 맵 선택 버튼을 맵 카드로 이동, 문구 정리"
+  "Sha256": "55c1cbf2f74a30ef7560dddbce6742c19accea3f55704dcbc9e0f6387a8cfac7",
+  "Notes": "방 화면 정리: 판정 아이콘 하나로 · 맵 선택/메인 버튼 카드 안으로 · 진행 바 삭제"
 }
