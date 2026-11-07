@@ -31,19 +31,6 @@ namespace ADOFAIMulti
             Net.Join(code, password, invite);
         }
 
-        /// <summary>Ctrl+Shift+Q: 기권하고 로비로</summary>
-        public static void Forfeit()
-        {
-            if (!(Phase == Phase.Countdown || Phase == Phase.Playing || Phase == Phase.WaitingStart || Phase == Phase.Loading)) return;
-            var st = Game.InGame ? Game.ReadStats() : (LastStats ?? new Stats());
-            st.Finished = true;
-            LastStats = st;
-            Net.SendToHost(Packet.Build(Msg.Progress, w => st.Write(w)));
-            Phase = Phase.Results;
-            Notice = "기권했습니다. 다른 플레이어를 기다리는 중...";
-            Game.RestoreSettings();
-            Island.ReturnFromLevel();
-        }
         public static bool InRoom => Phase != Phase.None;
         public static string Notice = "";
 
@@ -398,7 +385,6 @@ namespace ADOFAIMulti
             }
             // 방에 있는 동안 메뉴로 나오면 항상 멀티 로비 화면 (멀티는 로비 안에서만)
             if (!Game.IsScnGame && !Island.InIsland && !Island.Busy && Phase != Phase.Loading) Island.Enter();
-            if (Game.InGame && Input.GetKeyDown(KeyCode.Q) && Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.LeftShift)) Forfeit();
             if (Net.IsHost) HostTick();
 
             // TUF 직접 다운로드 진행률을 방장에게 보고
@@ -442,7 +428,7 @@ namespace ADOFAIMulti
                 case Phase.Playing:
                     Game.KeepNoFail();
                     bool won = Game.IsWon();
-                    // 레벨을 나가버리면 기권 처리
+                    // 레벨을 나가버리면 그 자리에서 끝난 것으로 처리
                     if (!Game.InGame)
                     {
                         if (_notInGameSince < 0) _notInGameSince = Time.realtimeSinceStartup;

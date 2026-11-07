@@ -83,7 +83,7 @@ namespace ADOFAIMulti
                 case "judge": return Session.JudgeNames[Session.Judge];
                 case "roomName": return Net.RoomName ?? "";
                 case "myName": return Net.MyName;
-                case "song": return noMap ? (Net.IsHost ? "어떤 맵으로 할까요?" : "방장이 맵을 고르는 중...") : (string.IsNullOrEmpty(Session.MapSong) ? Session.MapTitle : Session.MapSong);
+                case "song": return noMap ? (Net.IsHost ? "선택한 맵 없음" : "방장이 맵을 고르는 중") : (string.IsNullOrEmpty(Session.MapSong) ? Session.MapTitle : Session.MapSong);
                 case "artist": return noMap ? "" : Session.MapArtist ?? "";
                 case "creator": return noMap ? "" : Session.MapAuthor ?? "";
                 case "diff": return noMap ? "" : Session.MapDiff ?? "";
@@ -347,8 +347,26 @@ namespace ADOFAIMulti
                     return;
                 case "판정 설정":
                 {
+                    // 글자 대신 얼불춤 판정 아이콘 (글자는 어느 판정인지 고르는 데만 씀)
                     string t = e.Text ?? ""; int j = t.Contains("느슨") ? 0 : t.Contains("엄격") ? 2 : 1;
-                    LToggle(e, r, Session.Judge == j, () => Session.HostSetJudge(j), host);
+                    bool on = Session.Judge == j;
+                    var oc = GUI.color;
+                    if (!host) GUI.color = A(oc, oc.a * 0.6f);
+                    if (on) LBox(r, A(C_acc, 0.18f), C_acc, e.Radius); else LBox(r, Hex("1f242c"), Hex("323a46"), e.Radius);
+                    float s = Mathf.Min(r.width, r.height) * 0.68f;
+                    var oi = GUI.color; if (!on) GUI.color = A(oi, oi.a * 0.4f);
+                    JudgeIcon(new Rect(r.center.x - s / 2f, r.center.y - s / 2f, s, s), j);
+                    GUI.color = oc;
+                    // 마우스를 올리면 이름 표시
+                    if (!_lBlocked && r.Contains(Event.current.mousePosition))
+                    {
+                        var ts = Label(LS(13), C_txt, FontStyle.Bold, TextAnchor.MiddleCenter);
+                        float tw = ts.CalcSize(new GUIContent(Session.JudgeNames[j])).x + LS(20);
+                        var tr = new Rect(r.center.x - tw / 2f, r.y - LS(32), tw, LS(26));
+                        LBox(tr, Hex("0d0f12"), Hex("3a4452"), 8);
+                        GUI.Label(tr, Session.JudgeNames[j], ts);
+                    }
+                    if (LClick(r, host, e.Radius)) Session.HostSetJudge(j);
                     return;
                 }
                 case "Steam 초대": if (Net.CanInvite) LButton(e, r, true, Net.InviteOverlay); return;
@@ -380,7 +398,6 @@ namespace ADOFAIMulti
                     }
                     return;
                 case "진행 단계 표시": LBox(r, e.Fill, e.Stroke, e.Radius); DrawStepperL(r); return;
-                case "기권": if (Session.Phase == Phase.Countdown || Session.Phase == Phase.Playing) LButton(e, r, true, Session.Forfeit); return;
                 case "맵 받기 진행률":
                 {
                     DlStatus(out float p);
@@ -602,7 +619,7 @@ namespace ADOFAIMulti
             if (ShowResults && Session.Results.Count > 0) cur = 4;
             if (Session.Phase == Phase.Lobby && Session.MapHash == null) cur = 0;
             float pad = LS(24), seg = (r.width - pad * 2) / (Steps.Length - 1);
-            float cy = r.y + r.height * 0.38f, d = LS(28);
+            float cy = r.center.y, d = LS(28);
             for (int i = 0; i < Steps.Length - 1; i++)
             {
                 float x0 = r.x + pad + seg * i + d / 2f + LS(6), x1 = r.x + pad + seg * (i + 1) - d / 2f - LS(6);
@@ -630,7 +647,6 @@ namespace ADOFAIMulti
                     if (Event.current.type == EventType.Repaint) LBox(cr, Hex("171b21"), Hex("3a4452"), 14);
                     GUI.Label(cr, (i + 1).ToString(), Label(LS(14), A(C_sub, 0.7f), FontStyle.Bold, TextAnchor.MiddleCenter));
                 }
-                GUI.Label(new Rect(cx - seg / 2f, cy + d / 2f + LS(6), seg, LS(22)), Steps[i], Label(LS(14), i == cur ? C_txt : i < cur ? C_sub : A(C_sub, 0.6f), i == cur ? FontStyle.Bold : FontStyle.Normal, TextAnchor.MiddleCenter));
             }
         }
 
@@ -849,20 +865,7 @@ namespace ADOFAIMulti
                     if (Net.IsHost) { GUILayout.BeginArea(new Rect(r.x + 24, r.yMax - 76, r.width - 48, 58)); if (GUILayout.Button("모두 멀티 섬으로", S_cta)) Session.HostBackToLobby(); GUILayout.EndArea(); }
                 }
             }
-            if (ph == Phase.Countdown || ph == Phase.Playing) ForfeitHint();
             return true;
-        }
-
-        /// <summary>오른쪽 아래 "Ctrl + Shift + Q 기권" 키캡 안내</summary>
-        static void ForfeitHint()
-        {
-            float y = UnityEngine.Screen.height - 28, x = UnityEngine.Screen.width - 230;
-            var o = GUI.color; GUI.color = A(o, 0.75f);
-            x = Keycap(x, y, "Ctrl") + 4; GUI.Label(new Rect(x, y - 11, 12, 22), "+", Label(12, C_sub, FontStyle.Normal, TextAnchor.MiddleCenter)); x += 14;
-            x = Keycap(x, y, "Shift") + 4; GUI.Label(new Rect(x, y - 11, 12, 22), "+", Label(12, C_sub, FontStyle.Normal, TextAnchor.MiddleCenter)); x += 14;
-            x = Keycap(x, y, "Q") + 8;
-            GUI.Label(new Rect(x, y - 11, 60, 22), "기권", Label(13, C_txt));
-            GUI.color = o;
         }
     }
 }

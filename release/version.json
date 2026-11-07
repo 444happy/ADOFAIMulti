@@ -1,7 +1,7 @@
 {
-  "Version": "0.18.0",
+  "Version": "0.19.0",
   "DllUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/ADOFAIMulti.dll",
   "InfoUrl": "https://raw.githubusercontent.com/444happy/ADOFAIMulti/main/release/Info.json",
-  "Sha256": "06490adc85b1887ea373793d742702d725c3f8605f48ccb6136191e73f710b20",
-  "Notes": "UI 디자인 개편: 방 카드·플레이어 슬롯·상황별 메인 버튼·진행 단계·결과 시상대·판정 분포, 아이콘, 하단 단축키 바, 정렬 메뉴 클릭 겹침 수정"
+  "Sha256": "87478944eb56653c0a6ba4ffb78cc347184f0455f77b2ecb6ada72e99ab325c8",
+  "Notes": "기권 삭제, 판정을 얼불춤 판정 아이콘으로, 진행 단계 글자·진행 가이드 삭제, 맵 선택 버튼을 맵 카드로 이동, 문구 정리"
 }

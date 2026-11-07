@@ -534,216 +534,6 @@
     "align": "center",
     "func": "방 코드로 참가",
     "note": ""
-   },
-   {
-    "id": "n26",
-    "type": "panel",
-    "name": "도움말",
-    "x": 1224,
-    "y": 736,
-    "w": 648,
-    "h": 280,
-    "text": "멀티는 이렇게 진행돼요",
-    "font": "game",
-    "size": 16,
-    "weight": 800,
-    "color": "#8a93a3",
-    "fill": "#14181e",
-    "stroke": "#2a313b",
-    "radius": 18,
-    "opacity": 1,
-    "align": "left",
-    "func": "(없음)",
-    "note": ""
-   },
-   {
-    "id": "n27",
-    "type": "chip",
-    "name": "",
-    "x": 1248,
-    "y": 786,
-    "w": 32,
-    "h": 32,
-    "text": "1",
-    "font": "game",
-    "size": 15,
-    "weight": 800,
-    "color": "#5ab8ff",
-    "fill": "#5ab8ff22",
-    "stroke": "#5ab8ff66",
-    "radius": 16,
-    "opacity": 1,
-    "align": "center",
-    "func": "(없음)",
-    "note": ""
-   },
-   {
-    "id": "n28",
-    "type": "text",
-    "name": "",
-    "x": 1296,
-    "y": 786,
-    "w": 552,
-    "h": 32,
-    "text": "방장이 맵을 고르면 모두에게 자동으로 보내져요",
-    "font": "game",
-    "size": 16,
-    "weight": 500,
-    "color": "#e8ecf1",
-    "fill": "transparent",
-    "stroke": "transparent",
-    "radius": 0,
-    "opacity": 1,
-    "align": "left",
-    "func": "(없음)",
-    "note": ""
-   },
-   {
-    "id": "n29",
-    "type": "chip",
-    "name": "",
-    "x": 1248,
-    "y": 834,
-    "w": 32,
-    "h": 32,
-    "text": "2",
-    "font": "game",
-    "size": 15,
-    "weight": 800,
-    "color": "#5ab8ff",
-    "fill": "#5ab8ff22",
-    "stroke": "#5ab8ff66",
-    "radius": 16,
-    "opacity": 1,
-    "align": "center",
-    "func": "(없음)",
-    "note": ""
-   },
-   {
-    "id": "n30",
-    "type": "text",
-    "name": "",
-    "x": 1296,
-    "y": 834,
-    "w": 552,
-    "h": 32,
-    "text": "맵을 다 받은 사람은 준비(F5)를 눌러요",
-    "font": "game",
-    "size": 16,
-    "weight": 500,
-    "color": "#e8ecf1",
-    "fill": "transparent",
-    "stroke": "transparent",
-    "radius": 0,
-    "opacity": 1,
-    "align": "left",
-    "func": "(없음)",
-    "note": ""
-   },
-   {
-    "id": "n31",
-    "type": "chip",
-    "name": "",
-    "x": 1248,
-    "y": 882,
-    "w": 32,
-    "h": 32,
-    "text": "3",
-    "font": "game",
-    "size": 15,
-    "weight": 800,
-    "color": "#5ab8ff",
-    "fill": "#5ab8ff22",
-    "stroke": "#5ab8ff66",
-    "radius": 16,
-    "opacity": 1,
-    "align": "center",
-    "func": "(없음)",
-    "note": ""
-   },
-   {
-    "id": "n32",
-    "type": "text",
-    "name": "",
-    "x": 1296,
-    "y": 882,
-    "w": 552,
-    "h": 32,
-    "text": "모두 준비되면 방장이 시작 — 동시에 카운트다운",
-    "font": "game",
-    "size": 16,
-    "weight": 500,
-    "color": "#e8ecf1",
-    "fill": "transparent",
-    "stroke": "transparent",
-    "radius": 0,
-    "opacity": 1,
-    "align": "left",
-    "func": "(없음)",
-    "note": ""
-   },
-   {
-    "id": "n33",
-    "type": "chip",
-    "name": "",
-    "x": 1248,
-    "y": 930,
-    "w": 32,
-    "h": 32,
-    "text": "4",
-    "font": "game",
-    "size": 15,
-    "weight": 800,
-    "color": "#5ab8ff",
-    "fill": "#5ab8ff22",
-    "stroke": "#5ab8ff66",
-    "radius": 16,
-    "opacity": 1,
-    "align": "center",
-    "func": "(없음)",
-    "note": ""
-   },
-   {
-    "id": "n34",
-    "type": "text",
-    "name": "",
-    "x": 1296,
-    "y": 930,
-    "w": 552,
-    "h": 32,
-    "text": "끝나면 정확도 순위와 세부 판정을 같이 봐요",
-    "font": "game",
-    "size": 16,
-    "weight": 500,
-    "color": "#e8ecf1",
-    "fill": "transparent",
-    "stroke": "transparent",
-    "radius": 0,
-    "opacity": 1,
-    "align": "left",
-    "func": "(없음)",
-    "note": ""
-   },
-   {
-    "id": "n35",
-    "type": "text",
-    "name": "",
-    "x": 1248,
-    "y": 980,
-    "w": 600,
-    "h": 22,
-    "text": "멀티 중에는 무적 모드가 고정돼요 · 플레이 중 Ctrl + Shift + Q 로 기권",
-    "font": "game",
-    "size": 13,
-    "weight": 500,
-    "color": "#5f6876",
-    "fill": "transparent",
-    "stroke": "transparent",
-    "radius": 0,
-    "opacity": 1,
-    "align": "left",
-    "func": "(없음)",
-    "note": ""
    }
   ]
  },
@@ -759,7 +549,7 @@
   "handoff": "",
   "elements": [
    {
-    "id": "n42",
+    "id": "n32",
     "type": "panel",
     "name": "상단 바",
     "x": 0,
@@ -780,7 +570,7 @@
     "note": ""
    },
    {
-    "id": "n43",
+    "id": "n33",
     "type": "panel",
     "name": "상단 바 선",
     "x": 0,
@@ -801,7 +591,7 @@
     "note": ""
    },
    {
-    "id": "n44",
+    "id": "n34",
     "type": "text",
     "name": "로고",
     "x": 28,
@@ -822,7 +612,7 @@
     "note": ""
    },
    {
-    "id": "n45",
+    "id": "n35",
     "type": "panel",
     "name": "구분선",
     "x": 300,
@@ -843,7 +633,7 @@
     "note": ""
    },
    {
-    "id": "n36",
+    "id": "n26",
     "type": "text",
     "name": "방 이름",
     "x": 320,
@@ -864,7 +654,7 @@
     "note": ""
    },
    {
-    "id": "n37",
+    "id": "n27",
     "type": "text",
     "name": "방 정보",
     "x": 320,
@@ -885,7 +675,7 @@
     "note": ""
    },
    {
-    "id": "n38",
+    "id": "n28",
     "type": "button",
     "name": "",
     "x": 1196,
@@ -906,7 +696,7 @@
     "note": ""
    },
    {
-    "id": "n39",
+    "id": "n29",
     "type": "button",
     "name": "",
     "x": 1384,
@@ -927,7 +717,7 @@
     "note": ""
    },
    {
-    "id": "n40",
+    "id": "n30",
     "type": "button",
     "name": "",
     "x": 1612,
@@ -948,7 +738,7 @@
     "note": ""
    },
    {
-    "id": "n41",
+    "id": "n31",
     "type": "button",
     "name": "",
     "x": 1752,
@@ -969,7 +759,7 @@
     "note": ""
    },
    {
-    "id": "n46",
+    "id": "n36",
     "type": "panel",
     "name": "명단",
     "x": 48,
@@ -990,7 +780,7 @@
     "note": ""
    },
    {
-    "id": "n47",
+    "id": "n37",
     "type": "text",
     "name": "인원",
     "x": 288,
@@ -1011,7 +801,7 @@
     "note": ""
    },
    {
-    "id": "n48",
+    "id": "n38",
     "type": "list",
     "name": "플레이어 명단",
     "x": 64,
@@ -1032,7 +822,7 @@
     "note": ""
    },
    {
-    "id": "n49",
+    "id": "n39",
     "type": "panel",
     "name": "맵 히어로 카드",
     "x": 520,
@@ -1053,7 +843,7 @@
     "note": ""
    },
    {
-    "id": "n50",
+    "id": "n40",
     "type": "image",
     "name": "난이도 아이콘",
     "x": 552,
@@ -1074,7 +864,7 @@
     "note": ""
    },
    {
-    "id": "n51",
+    "id": "n41",
     "type": "text",
     "name": "머리말",
     "x": 900,
@@ -1095,12 +885,12 @@
     "note": ""
    },
    {
-    "id": "n52",
+    "id": "n42",
     "type": "text",
     "name": "곡명",
     "x": 900,
     "y": 160,
-    "w": 940,
+    "w": 760,
     "h": 64,
     "text": "{song}",
     "font": "game",
@@ -1116,12 +906,12 @@
     "note": ""
    },
    {
-    "id": "n53",
+    "id": "n43",
     "type": "text",
     "name": "아티스트",
     "x": 900,
     "y": 226,
-    "w": 940,
+    "w": 760,
     "h": 32,
     "text": "{artist}",
     "font": "game",
@@ -1137,12 +927,12 @@
     "note": ""
    },
    {
-    "id": "n54",
+    "id": "n44",
     "type": "text",
     "name": "제작자",
     "x": 900,
     "y": 260,
-    "w": 940,
+    "w": 760,
     "h": 26,
     "text": "제작  {creator}",
     "font": "game",
@@ -1158,7 +948,28 @@
     "note": ""
    },
    {
-    "id": "n55",
+    "id": "n45",
+    "type": "button",
+    "name": "맵 선택 (방장)",
+    "x": 1672,
+    "y": 124,
+    "w": 176,
+    "h": 48,
+    "text": "{i:search} 맵 선택",
+    "font": "game",
+    "size": 16,
+    "weight": 700,
+    "color": "#e8ecf1",
+    "fill": "#232a33",
+    "stroke": "#3a4452",
+    "radius": 12,
+    "opacity": 1,
+    "align": "center",
+    "func": "맵 선택 열기",
+    "note": ""
+   },
+   {
+    "id": "n46",
     "type": "chip",
     "name": "출처",
     "x": 900,
@@ -1179,7 +990,7 @@
     "note": ""
    },
    {
-    "id": "n56",
+    "id": "n47",
     "type": "chip",
     "name": "크기",
     "x": 1062,
@@ -1200,7 +1011,7 @@
     "note": ""
    },
    {
-    "id": "n57",
+    "id": "n48",
     "type": "chip",
     "name": "난이도",
     "x": 1184,
@@ -1221,7 +1032,7 @@
     "note": ""
    },
    {
-    "id": "n58",
+    "id": "n49",
     "type": "text",
     "name": "받기 상태",
     "x": 900,
@@ -1242,7 +1053,7 @@
     "note": ""
    },
    {
-    "id": "n59",
+    "id": "n50",
     "type": "text",
     "name": "받기 비율",
     "x": 1640,
@@ -1263,7 +1074,7 @@
     "note": ""
    },
    {
-    "id": "n60",
+    "id": "n51",
     "type": "progress",
     "name": "받기 진행바",
     "x": 900,
@@ -1284,7 +1095,7 @@
     "note": ""
    },
    {
-    "id": "n61",
+    "id": "n52",
     "type": "panel",
     "name": "방 설정 카드",
     "x": 520,
@@ -1305,7 +1116,7 @@
     "note": ""
    },
    {
-    "id": "n62",
+    "id": "n53",
     "type": "text",
     "name": "",
     "x": 544,
@@ -1326,13 +1137,13 @@
     "note": ""
    },
    {
-    "id": "n63",
+    "id": "n54",
     "type": "chip",
     "name": "",
     "x": 544,
     "y": 580,
-    "w": 160,
-    "h": 44,
+    "w": 88,
+    "h": 80,
     "text": "느슨함",
     "font": "game",
     "size": 16,
@@ -1347,13 +1158,13 @@
     "note": ""
    },
    {
-    "id": "n64",
+    "id": "n55",
     "type": "chip",
     "name": "",
-    "x": 712,
+    "x": 644,
     "y": 580,
-    "w": 160,
-    "h": 44,
+    "w": 88,
+    "h": 80,
     "text": "보통",
     "font": "game",
     "size": 16,
@@ -1368,13 +1179,13 @@
     "note": ""
    },
    {
-    "id": "n65",
+    "id": "n56",
     "type": "chip",
     "name": "",
-    "x": 880,
+    "x": 744,
     "y": 580,
-    "w": 160,
-    "h": 44,
+    "w": 88,
+    "h": 80,
     "text": "엄격함",
     "font": "game",
     "size": 16,
@@ -1389,11 +1200,11 @@
     "note": ""
    },
    {
-    "id": "n66",
+    "id": "n57",
     "type": "text",
     "name": "",
     "x": 544,
-    "y": 644,
+    "y": 680,
     "w": 400,
     "h": 20,
     "text": "공개 설정",
@@ -1410,11 +1221,11 @@
     "note": ""
    },
    {
-    "id": "n67",
+    "id": "n58",
     "type": "chip",
     "name": "",
     "x": 544,
-    "y": 668,
+    "y": 704,
     "w": 160,
     "h": 44,
     "text": "{i:globe} 공개",
@@ -1431,11 +1242,11 @@
     "note": ""
    },
    {
-    "id": "n68",
+    "id": "n59",
     "type": "chip",
     "name": "",
     "x": 712,
-    "y": 668,
+    "y": 704,
     "w": 160,
     "h": 44,
     "text": "{i:lock} 비공개",
@@ -1452,14 +1263,14 @@
     "note": ""
    },
    {
-    "id": "n69",
+    "id": "n60",
     "type": "text",
     "name": "",
     "x": 544,
-    "y": 732,
+    "y": 760,
     "w": 512,
-    "h": 48,
-    "text": "방장만 바꿀 수 있어요. 판정은 모두에게 똑같이 적용돼요.",
+    "h": 28,
+    "text": "방장만 바꿀 수 있어요",
     "font": "game",
     "size": 13,
     "weight": 500,
@@ -1473,7 +1284,7 @@
     "note": ""
    },
    {
-    "id": "n70",
+    "id": "n61",
     "type": "panel",
     "name": "상태 카드",
     "x": 1104,
@@ -1494,7 +1305,7 @@
     "note": ""
    },
    {
-    "id": "n71",
+    "id": "n62",
     "type": "panel",
     "name": "진행 바",
     "x": 520,
@@ -1515,12 +1326,12 @@
     "note": ""
    },
    {
-    "id": "n72",
+    "id": "n63",
     "type": "panel",
     "name": "진행 단계",
     "x": 544,
     "y": 860,
-    "w": 640,
+    "w": 940,
     "h": 120,
     "text": "",
     "font": "game",
@@ -1536,49 +1347,7 @@
     "note": ""
    },
    {
-    "id": "n73",
-    "type": "button",
-    "name": "맵 선택 (방장)",
-    "x": 1220,
-    "y": 872,
-    "w": 280,
-    "h": 104,
-    "text": "{i:search} 맵 선택",
-    "font": "game",
-    "size": 20,
-    "weight": 700,
-    "color": "#e8ecf1",
-    "fill": "#232a33",
-    "stroke": "#3a4452",
-    "radius": 14,
-    "opacity": 1,
-    "align": "center",
-    "func": "맵 선택 열기",
-    "note": ""
-   },
-   {
-    "id": "n74",
-    "type": "button",
-    "name": "받기 일시정지 (참가자)",
-    "x": 1220,
-    "y": 872,
-    "w": 280,
-    "h": 104,
-    "text": "일시정지",
-    "font": "game",
-    "size": 20,
-    "weight": 700,
-    "color": "#e8ecf1",
-    "fill": "#232a33",
-    "stroke": "#3a4452",
-    "radius": 14,
-    "opacity": 1,
-    "align": "center",
-    "func": "받기 일시정지/재개",
-    "note": ""
-   },
-   {
-    "id": "n75",
+    "id": "n64",
     "type": "button",
     "name": "메인 버튼",
     "x": 1516,
@@ -1599,7 +1368,28 @@
     "note": ""
    },
    {
-    "id": "n76",
+    "id": "n65",
+    "type": "button",
+    "name": "받기 일시정지 (참가자)",
+    "x": 1536,
+    "y": 744,
+    "w": 152,
+    "h": 40,
+    "text": "일시정지",
+    "font": "game",
+    "size": 14,
+    "weight": 700,
+    "color": "#e8ecf1",
+    "fill": "#232a33",
+    "stroke": "#3a4452",
+    "radius": 10,
+    "opacity": 1,
+    "align": "center",
+    "func": "받기 일시정지/재개",
+    "note": ""
+   },
+   {
+    "id": "n66",
     "type": "button",
     "name": "받기 취소 (참가자)",
     "x": 1700,
@@ -1633,7 +1423,7 @@
   "handoff": "",
   "elements": [
    {
-    "id": "n77",
+    "id": "n67",
     "type": "panel",
     "name": "어둡게 깔기",
     "x": 0,
@@ -1654,7 +1444,7 @@
     "note": ""
    },
    {
-    "id": "n78",
+    "id": "n68",
     "type": "panel",
     "name": "맵 서랍",
     "x": 1200,
@@ -1675,7 +1465,7 @@
     "note": ""
    },
    {
-    "id": "n79",
+    "id": "n69",
     "type": "panel",
     "name": "서랍 테두리",
     "x": 1200,
@@ -1696,7 +1486,7 @@
     "note": ""
    },
    {
-    "id": "n80",
+    "id": "n70",
     "type": "text",
     "name": "",
     "x": 1236,
@@ -1717,7 +1507,7 @@
     "note": ""
    },
    {
-    "id": "n81",
+    "id": "n71",
     "type": "text",
     "name": "",
     "x": 1236,
@@ -1738,7 +1528,7 @@
     "note": ""
    },
    {
-    "id": "n82",
+    "id": "n72",
     "type": "button",
     "name": "",
     "x": 1828,
@@ -1759,7 +1549,7 @@
     "note": ""
    },
    {
-    "id": "n83",
+    "id": "n73",
     "type": "chip",
     "name": "",
     "x": 1236,
@@ -1780,7 +1570,7 @@
     "note": ""
    },
    {
-    "id": "n84",
+    "id": "n74",
     "type": "chip",
     "name": "",
     "x": 1440,
@@ -1801,7 +1591,7 @@
     "note": ""
    },
    {
-    "id": "n85",
+    "id": "n75",
     "type": "input",
     "name": "검색",
     "x": 1236,
@@ -1822,7 +1612,7 @@
     "note": ""
    },
    {
-    "id": "n86",
+    "id": "n76",
     "type": "slider",
     "name": "난이도 범위",
     "x": 1236,
@@ -1843,7 +1633,7 @@
     "note": ""
    },
    {
-    "id": "n87",
+    "id": "n77",
     "type": "text",
     "name": "",
     "x": 1236,
@@ -1864,7 +1654,7 @@
     "note": ""
    },
    {
-    "id": "n88",
+    "id": "n78",
     "type": "chip",
     "name": "",
     "x": 1360,
@@ -1885,7 +1675,7 @@
     "note": ""
    },
    {
-    "id": "n89",
+    "id": "n79",
     "type": "chip",
     "name": "",
     "x": 1472,
@@ -1906,7 +1696,7 @@
     "note": ""
    },
    {
-    "id": "n90",
+    "id": "n80",
     "type": "chip",
     "name": "",
     "x": 1544,
@@ -1927,7 +1717,7 @@
     "note": ""
    },
    {
-    "id": "n91",
+    "id": "n81",
     "type": "text",
     "name": "",
     "x": 1236,
@@ -1948,7 +1738,7 @@
     "note": ""
    },
    {
-    "id": "n92",
+    "id": "n82",
     "type": "button",
     "name": "정렬 기준",
     "x": 1360,
@@ -1969,7 +1759,7 @@
     "note": ""
    },
    {
-    "id": "n93",
+    "id": "n83",
     "type": "chip",
     "name": "",
     "x": 1548,
@@ -1990,7 +1780,7 @@
     "note": ""
    },
    {
-    "id": "n94",
+    "id": "n84",
     "type": "chip",
     "name": "",
     "x": 1656,
@@ -2011,7 +1801,7 @@
     "note": ""
    },
    {
-    "id": "n95",
+    "id": "n85",
     "type": "list",
     "name": "맵 목록",
     "x": 1236,
@@ -2032,7 +1822,7 @@
     "note": ""
    },
    {
-    "id": "n96",
+    "id": "n86",
     "type": "button",
     "name": "시작",
     "x": 1236,
@@ -2066,7 +1856,7 @@
   "handoff": "",
   "elements": [
    {
-    "id": "n97",
+    "id": "n87",
     "type": "image",
     "name": "게임 화면",
     "x": 0,
@@ -2087,7 +1877,7 @@
     "note": ""
    },
    {
-    "id": "n98",
+    "id": "n88",
     "type": "ranking",
     "name": "실시간 순위표",
     "x": 24,
@@ -2108,7 +1898,7 @@
     "note": ""
    },
    {
-    "id": "n99",
+    "id": "n89",
     "type": "text",
     "name": "카운트다운",
     "x": 760,
@@ -2142,7 +1932,7 @@
   "handoff": "",
   "elements": [
    {
-    "id": "n100",
+    "id": "n90",
     "type": "panel",
     "name": "배경",
     "x": 0,
@@ -2163,7 +1953,7 @@
     "note": ""
    },
    {
-    "id": "n101",
+    "id": "n91",
     "type": "text",
     "name": "머리말",
     "x": 360,
@@ -2184,7 +1974,7 @@
     "note": ""
    },
    {
-    "id": "n102",
+    "id": "n92",
     "type": "text",
     "name": "곡명",
     "x": 360,
@@ -2205,7 +1995,7 @@
     "note": ""
    },
    {
-    "id": "n103",
+    "id": "n93",
     "type": "text",
     "name": "곡 정보",
     "x": 360,
@@ -2226,7 +2016,7 @@
     "note": ""
    },
    {
-    "id": "n104",
+    "id": "n94",
     "type": "panel",
     "name": "2등",
     "x": 580,
@@ -2247,7 +2037,7 @@
     "note": ""
    },
    {
-    "id": "n105",
+    "id": "n95",
     "type": "panel",
     "name": "1등",
     "x": 840,
@@ -2268,7 +2058,7 @@
     "note": ""
    },
    {
-    "id": "n106",
+    "id": "n96",
     "type": "panel",
     "name": "3등",
     "x": 1100,
@@ -2289,7 +2079,7 @@
     "note": ""
    },
    {
-    "id": "n107",
+    "id": "n97",
     "type": "list",
     "name": "결과 표",
     "x": 360,
@@ -2310,7 +2100,7 @@
     "note": ""
    },
    {
-    "id": "n108",
+    "id": "n98",
     "type": "button",
     "name": "한 판 더",
     "x": 640,
@@ -2331,7 +2121,7 @@
     "note": ""
    },
    {
-    "id": "n109",
+    "id": "n99",
     "type": "button",
     "name": "",
     "x": 980,

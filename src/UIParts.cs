@@ -242,6 +242,47 @@ namespace ADOFAIMulti
             $"<color=#{HexOf(J_perfect)}><b>{s.Perfect}</b></color>  " +
             $"<color=#{HexOf(J_near)}>{s.LatePerfect}</color> <color=#{HexOf(J_very)}>{s.VeryLate}</color> <color=#{HexOf(J_too)}>{s.TooLate}</color>";
 
+        // ---------------- 판정 아이콘 (얼불춤 판정 선택 화면의 과녁 그림) ----------------
+        // 게임은 RDConstants.data.bullseyeSprites[느슨함 0 · 보통 1 · 엄격함 2] 를 판정 아이콘으로 씀 → 같은 그림을 가져다 그림
+        static Sprite[] _bullseye;
+        static float _bullseyeAt = -99;
+
+        static Sprite JudgeSprite(int j)
+        {
+            if (_bullseye == null && Time.unscaledTime - _bullseyeAt > 2f)
+            {
+                _bullseyeAt = Time.unscaledTime;
+                try
+                {
+                    var d = RDConstants.data;
+                    if (d != null && d.bullseyeSprites != null && d.bullseyeSprites.Length >= 3) _bullseye = d.bullseyeSprites;
+                }
+                catch (System.Exception ex) { Main.Log("판정 아이콘을 못 가져옴: " + ex.Message); _bullseyeAt = float.MaxValue; }
+            }
+            return _bullseye != null && j >= 0 && j < _bullseye.Length ? _bullseye[j] : null;
+        }
+
+        /// <summary>판정 j 아이콘을 r 안에 비율 유지해서 그림 (게임 그림이 없으면 직접 그린 과녁)</summary>
+        static void JudgeIcon(Rect r, int j)
+        {
+            if (Event.current.type != EventType.Repaint) return;
+            var sp = JudgeSprite(j);
+            if (sp != null && sp.texture != null)
+            {
+                var tex = sp.texture; var tr = sp.textureRect;
+                float k = Mathf.Min(r.width / tr.width, r.height / tr.height);
+                var fit = new Rect(r.center.x - tr.width * k / 2f, r.center.y - tr.height * k / 2f, tr.width * k, tr.height * k);
+                GUI.DrawTextureWithTexCoords(fit, tex, new Rect(tr.x / tex.width, tr.y / tex.height, tr.width / tex.width, tr.height / tex.height));
+                return;
+            }
+            // 대신 그리는 과녁: 느슨할수록 가운데가 큼
+            var c = j == 0 ? C_ok : j == 1 ? C_gold : J_too;
+            float R = Mathf.Min(r.width, r.height) / 2f;
+            Dot(r.center, R, A(c, 0.22f));
+            Dot(r.center, R * 0.68f, A(c, 0.45f));
+            Dot(r.center, R * (j == 0 ? 0.48f : j == 1 ? 0.34f : 0.2f), c);
+        }
+
         // ---------------- 섹션 머리말 (작고 굵은 회색) ----------------
         static void Overline(Rect r, string text, Color? c = null) => GUI.Label(r, text, Label(13, c ?? C_sub, FontStyle.Bold));
     }

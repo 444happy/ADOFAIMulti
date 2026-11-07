@@ -814,7 +814,7 @@ namespace ADOFAIMulti
 
             if (Session.MapHash == null)
             {
-                GUI.Label(new Rect(hero.x + 28, hero.y + 60, hero.width - 56, 46), host ? "어떤 맵으로 할까요?" : "방장이 맵을 고르는 중...", S_title);
+                GUI.Label(new Rect(hero.x + 28, hero.y + 60, hero.width - 56, 46), host ? "선택한 맵 없음" : "방장이 맵을 고르는 중", S_title);
                 GUI.Label(new Rect(hero.x + 28, hero.y + 112, hero.width - 56, 24), host ? "맵을 고르면 모두에게 자동으로 전송돼요. 이미 받은 사람은 건너뛰어요." : "맵이 정해지면 자동으로 받아요.", S_sub);
             }
             else
@@ -1039,7 +1039,7 @@ namespace ADOFAIMulti
 
                 bool forfeit = s.Progress < 0.999f;
                 GUI.Label(new Rect(c.name, row.y + (forfeit ? 10 : 0), c.nameW, forfeit ? 24 : row.height), Trim(e.Name, 16) + (me ? $"  <color=#{HexOf(C_acc)}><size=12>나</size></color>" : ""), Label(17, C_txt, FontStyle.Bold));
-                if (forfeit) GUI.Label(new Rect(c.name, row.y + 34, c.nameW, 20), $"기권  ·  {s.Progress * 100:0}% 진행", Label(12, C_fire));
+                if (forfeit) GUI.Label(new Rect(c.name, row.y + 34, c.nameW, 20), $"미완주  ·  {s.Progress * 100:0}% 진행", Label(12, C_fire));
 
                 GUI.Label(new Rect(c.acc, row.y, 120, row.height), $"{s.Acc * 100:0.00}%", Label(20, rank == 1 ? C_gold : C_txt, FontStyle.Bold, TextAnchor.MiddleRight));
                 GUI.Label(new Rect(c.xacc, row.y, 96, row.height), $"{s.XAcc * 100:0.00}%", Label(15, C_sub, FontStyle.Normal, TextAnchor.MiddleRight));
@@ -1080,7 +1080,7 @@ namespace ADOFAIMulti
             GUI.Label(new Rect(r.x, y, r.width, 44), $"{e.Stats.Acc * 100:0.00}%", Label(rank == 1 ? 36 : 30, rc, FontStyle.Bold, TextAnchor.MiddleCenter));
             y += 46;
             int miss = e.Stats.Miss + e.Stats.Overload;
-            string sub = e.Stats.Progress < 0.999f ? $"기권 · {e.Stats.Progress * 100:0}% 진행" : $"X {e.Stats.XAcc * 100:0.00}%   ·   {(miss == 0 ? "노 미스" : "미스 " + miss)}";
+            string sub = e.Stats.Progress < 0.999f ? $"미완주 · {e.Stats.Progress * 100:0}% 진행" : $"X {e.Stats.XAcc * 100:0.00}%   ·   {(miss == 0 ? "노 미스" : "미스 " + miss)}";
             if (y + 20 <= r.yMax) GUI.Label(new Rect(r.x, y, r.width, 20), sub, Label(13, C_sub, FontStyle.Normal, TextAnchor.MiddleCenter));
             if (y + 50 <= r.yMax - 10) JudgeBar(new Rect(r.x + 24, r.yMax - 22, r.width - 48, 6), e.Stats);
         }
@@ -1483,7 +1483,6 @@ namespace ADOFAIMulti
 
             SettingsHead("단축키", null);
             ShortcutRow(new[] { "F5" }, "준비 / 준비 취소 (맵을 받은 뒤)");
-            ShortcutRow(new[] { "Ctrl", "Shift", "Q" }, "플레이 중 기권");
             ShortcutRow(new[] { "Esc" }, "뒤로 · 창 닫기 · 방 나가기");
             GUILayout.Space(4);
             GUILayout.Label("멀티 섬은 메인 섬의 '멀티' 포탈로 들어가요. 멀티 중에는 무적 모드가 고정돼요.", Label(13, A(C_sub, 0.8f), FontStyle.Normal, TextAnchor.UpperLeft, true));
@@ -1572,7 +1571,7 @@ namespace ADOFAIMulti
 
         static void DrawConfirm()
         {
-            var cr = Modal(500, 260, "방에서 나갈까요?", "exit", () => _confirmLeave = false);
+            var cr = Modal(500, 260, "방 나가기", "exit", () => _confirmLeave = false);
             if (cr.width <= 0) return;
             GUI.Label(new Rect(cr.x, cr.y, cr.width, 60), Net.IsHost
                 ? "방장이 나가면 방이 사라지고 모두 로비 밖으로 나가요."
@@ -1648,7 +1647,6 @@ namespace ADOFAIMulti
                 else Banner("완주! 다른 사람을 기다리는 중...");
             }
 
-            if (ph == Phase.Countdown || ph == Phase.Playing) ForfeitHint();
         }
 
         static void Banner(string text)
